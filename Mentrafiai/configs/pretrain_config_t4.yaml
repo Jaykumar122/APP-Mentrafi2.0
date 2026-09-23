@@ -1,0 +1,56 @@
+# MentraFiAI Pretrain Configuration — T4 / 2× T4 (16 GB VRAM, Kaggle / Colab)
+#
+# Optimized for 2× T4 GPUs (or 1× T4):
+# - 16 GB VRAM allows batch_size=16 per GPU.
+# - On 2× T4 with DDP: 2 GPUs × batch 16 = 32 sequences per forward pass.
+# - target_effective_batch = 131,072 tokens (automatically 4 accum steps on 2× T4, 8 on 1× T4).
+# - Precision: FP16 with native Tensor Core acceleration + GradScaler.
+
+pretrain:
+  # Training dynamics (Rock-solid stability on 2× T4 GPUs)
+  batch_size: 8                       # 8 sequences per GPU (~3.8 GB VRAM / 15 GB - 100% OOM-safe)
+  target_effective_batch: 131072      # Exactly 131,072 tokens/step (across 2 GPUs = 8 accum steps)
+  gradient_accumulation_steps: 8      # Auto-scaled by pretrain.py based on GPU count
+  max_steps: 55000                    # Resumes from 17,000; ~20-25 hours on 2× T4 (reaches ~7.2B tokens, val_loss < 2.5)
+
+  # Learning rate — standard cosine decay from current step to 55,000
+  learning_rate: 3.0e-4
+  min_learning_rate: 3.0e-5
+  warmup_steps: 750
+  weight_decay: 0.1
+  max_grad_norm: 1.0
+
+  # Precision — fp16 on T4 (Turing Tensor Cores accelerate FP16)
+  use_mixed_precision: true
+  gradient_checkpointing: false       # 16 GB has plenty of headroom, no checkpointing needed
+
+  # Evaluation and logging
+  eval_interval: 100
+  eval_iters: 50
+  log_interval: 10
+
+  # Checkpoint saving — saves every ~8-10 minutes on 2× T4
+  save_interval: 250
+  checkpoint_dir: "./checkpoints/pretrain_v2"
+  keep_last_n_checkpoints: 3
+
+  # Resume capability
+  init_from: "scratch"
+  resume_from: null
+
+  # Data
+  train_data: "./data/processed/corpus_v2/train.bin"
+  val_data: "./data/processed/corpus_v2/val.bin"
+
+# Monitoring
+monitoring:
+  heartbeat_file: "./training_heartbeat.txt"
+  heartbeat_interval: 10
+  auto_save_on_interrupt: true
+
+# Hardware
+hardware:
+  device: "cuda"
+  compile: false
+  num_workers: 4                      # Multi-core CPU on Kaggle
+  pin_memory: true

@@ -1,0 +1,44 @@
+# MentraFiAI SFT Configuration
+# Goal: mutual fund advisory — better than GPT in recommendations
+# Run AFTER pretrain completes: init_from points to best pretrain checkpoint
+
+finetune:
+  # Training dynamics (Dual T4 or Single GPU)
+  batch_size: 4
+  gradient_accumulation_steps: 8       # Effective batch = 32
+  max_steps: 800                       # Strict limit to prevent memorization/overfit
+  learning_rate: 1.0e-5                # Conservative fine-tuning rate
+  min_learning_rate: 1.0e-6
+  warmup_steps: 50
+  weight_decay: 0.02                   # Increased regularization
+  max_grad_norm: 1.0
+
+  # Precision & performance
+  use_mixed_precision: true
+  dynamic_padding: true
+
+  # Evaluation and logging (track val loss closely)
+  eval_interval: 50
+  eval_iters: 50
+  log_interval: 10
+  early_stopping: true
+
+  # Checkpoint saving
+  save_interval: 100
+  checkpoint_dir: "./checkpoints/finetune_v6"
+  keep_last_n_checkpoints: 3
+
+  # Initialize from stable v5
+  init_from: "./checkpoints/finetune_v5/best_model.pt"
+
+  # Data paths (curated 8k-12k dataset)
+  train_data: "./data/processed/sft_train_v6_curated.jsonl"
+  val_data: "./data/processed/sft_val_v6_curated.jsonl"
+
+sft:
+  task: "mutual_fund_advisory"
+  generate_reasoning: true
+  use_grounded_facts: true
+  hedge_uncertainty: true
+  requires_database: true
+  deterministic_ranking: true

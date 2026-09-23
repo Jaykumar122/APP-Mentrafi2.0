@@ -1,0 +1,71 @@
+# MentraFiAI Pretrain Configuration
+# GPU: GTX 1650 (4GB VRAM)
+# Measured throughput: ~1,850 tok/s (fp32, batch=1 with grad_accum=128)
+# Target: 1.26B tokens (~7.5 days)
+#
+# KEY DECISIONS vs FIRST DRAFT
+# - label_smoothing removed: hurts reported loss AND pretrain generalization
+# - grad_accum 64->128: larger effective batch (131k tokens) -> stabler gradients -> lower final loss
+# - max_steps 16800->9628: 1.26B tokens / 131072 tok/step = 9,613 steps (rounded up)
+# - learning_rate 6e-4->3e-4: larger batch needs lower LR (linear scaling rule halves LR)
+# - min_learning_rate: decay to 3e-5 (10x ratio, standard)
+# - warmup_steps: 5% of max_steps = 481 steps
+# - weight_decay 0.1 kept (optimal for pretrain)
+# - log_interval 10: see loss every ~10 steps for live monitoring
+
+pretrain:
+  # Training dynamics
+  batch_size: 1                       # GTX 1650 has no tensor cores — batch=1 is fastest (attention is quadratic)
+  gradient_accumulation_steps: 128    # Effective batch = 1x128x1024 = 131,072 tokens
+  max_steps: 15000                    # EXTENDED: train for 2 full epochs to break plateau
+
+  # Learning rate schedule — CONSERVATIVE after NaN spike at step 6457
+  learning_rate: 3.0e-4               # Restored to safe baseline (5e-4 caused instability)
+  min_learning_rate: 3.0e-5           # Standard 10x decay ratio
+  warmup_steps: 750                   # 5% of new max_steps
+  weight_decay: 0.1
+  max_grad_norm: 1.0
+
+  # Precision and optimization
+  use_mixed_precision: false          # fp32 on GTX 1650 (no tensor cores)
+  gradient_checkpointing: false
+
+  # Evaluation and logging — MORE FREQUENT to catch improvements
+  eval_interval: 100                  # Check val_loss more often
+  eval_iters: 100
+  log_interval: 10
+
+  # Checkpoint saving — save_interval halved because steps are now ~2x faster
+  save_interval: 27                   # 27 steps ~= 30 min at batch=1 (~54 steps/hr x 0.5hr)
+  checkpoint_dir: "./checkpoints/pretrain_v2"
+  keep_last_n_checkpoints: 3
+
+  # Resume capability
+  init_from: "scratch"                # Fresh pretrain from random init
+  resume_from: null                   # Set to checkpoint path to resume
+
+  # Data — repacked after finance_instruct cleanup
+  train_data: "./data/processed/corpus_v2/train.bin"
+  val_data: "./data/processed/corpus_v2/val.bin"
+
+# Monitoring and safety
+monitoring:
+  heartbeat_file: "./training_heartbeat.txt"
+  heartbeat_interval: 10              # Steps between heartbeat updates
+  auto_save_on_interrupt: true        # Save checkpoint on Ctrl+C
+
+# Hardware-specific settings
+hardware:
+  device: "cuda"
+  compile: false
+  num_workers: 0                      # 0 prevents cudaErrorIllegalAddress on Windows (multiprocessing bug)
+  pin_memory: false                   # false prevents page-locked memory crashes
+
+
+# Expected performance (GTX 1650, fp32, batch=1, grad_accum=128)
+# Effective batch = 1 x 128 x 1024 = 131,072 tokens
+# VRAM: ~1.6 GB (GTX 1650 has no tensor cores — batch=1 is the fastest possible)
+# Throughput: ~1,984 tok/s
+# Steps/hour: ~54
+# Note: larger batch makes GTX 1650 SLOWER (attention is O(seq^2), fills tiny cache)
+# Checkpoints: every 86 steps ~= 2 hours

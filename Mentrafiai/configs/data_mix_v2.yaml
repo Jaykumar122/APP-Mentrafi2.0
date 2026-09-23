@@ -1,0 +1,130 @@
+# =============================================================================
+# MentraFiAI v2 pretraining mixture
+#
+# WHY THIS FILE LOOKS THE WAY IT DOES
+#
+# v1 had a data_mix.yaml that declared 25% finance. The corpus it actually
+# produced was 0.0025% finance -- four orders of magnitude out. Nothing checked,
+# so nothing complained, and the model was pretrained on essentially no finance
+# text at all. Two root causes, both addressed here:
+#
+#   1. The declared shares were aspirational. They described what someone wanted,
+#      not what the sources could supply. The RBI/SEBI/AMFI files were 0.1 MiB
+#      between them (11 documents) and no stage noticed.
+#   2. Shares were expressed only as percentages, with no statement of how many
+#      times a source may be repeated to hit its share. A supply shortfall
+#      therefore had no defined behaviour -- it silently became a smaller share.
+#
+# So every source below carries THREE numbers, not one:
+#   share       fraction of final training tokens this source should contribute
+#   max_epochs  how many times its text may be repeated to reach that share
+#   available   measured bytes on disk after cleaning (filled in by the packer)
+#
+# pack_corpus_v2.py computes required_epochs = share * total_tokens / available
+# and HARD-FAILS if required_epochs > max_epochs for any source. A shortfall is
+# now a build error with a number attached, not a silent 10,000x miss.
+#
+# Repetition is deliberate, not a workaround. Measured supply of open-licensed
+# finance instruction text is ~586 MiB total across every source that cleared
+# licence review, which cannot fill a 35% finance share of a 1.26B-token budget
+# on a single pass. Repeating high-quality in-domain data for a small number of
+# epochs is well-established as close to loss-free (Muennighoff et al. 2023,
+# "Scaling Data-Constrained Language Models", finds up to ~4 epochs approximately
+# matches fresh data). Every max_epochs below is <= 4 for that reason. General
+# web text is abundant, so it is held at 1.0 -- there is no reason to repeat it.
+#
+# TOTAL TOKEN BUDGET
+# 1.26B tokens, from training/arch_bench.py: the measured compute-optimal point
+# for this GPU over a 6.5-day run is N=62.9M non-embedding params, D=1.26B
+# tokens. It is a MEASURED budget (median K = N*D = 7.91e16 across 10
+# benchmarked architectures), not a round number chosen for convenience.
+# =============================================================================
+
+total_tokens: 1_260_000_000
+bytes_per_token: 4.2          # refined by the packer once the tokenizer is retrained
+val_fraction: 0.005           # ~6.3M tokens: large enough for a stable val loss
+
+# Held-out split is by DOCUMENT HASH, not by slicing the tail of each file.
+# Slicing leaks: consecutive documents from the same stream share topic and often
+# share near-duplicate passages, so a tail split measures memorisation of
+# neighbours rather than generalisation.
+split_by: document_hash
+
+# -----------------------------------------------------------------------------
+# The mixture, grouped by the PURPOSE each group serves. The purpose grouping is
+# the design; the per-source shares are how it is implemented.
+# -----------------------------------------------------------------------------
+groups:
+
+  # --- General English fluency: 57.1% ----------------------------------------
+  # The foundation. A 63M-param model has limited capacity, and if it cannot
+  # write fluent English then no amount of finance data makes it a useful
+  # advisor -- it becomes a model that produces finance-flavoured noise. This
+  # group is deliberately the largest. It also carries the slack: because the
+  # finance and numeracy sources are supply-capped (they cannot absorb more
+  # share without exceeding their epoch limits), any residual needed to reach a
+  # total of 1.0 lands here, where fineweb/cosmopedia/wikipedia have epochs to
+  # spare on a single pass.
+  general_fluency:
+    share: 0.571
+    sources:
+      fineweb_edu:      {share: 0.300, max_epochs: 1.0}   # educational web prose
+      cosmopedia:       {share: 0.160, max_epochs: 1.0}   # textbook / explanatory
+      wikipedia:        {share: 0.081, max_epochs: 1.0}   # encyclopedic register
+      gutenberg:        {share: 0.030, max_epochs: 1.0}   # long-form syntax only
+
+  # --- Finance knowledge and vocabulary: 39% --------------------------------
+  # The domain specialisation, strengthened relative to the first draft (32%)
+  # because v1's fatal failure was too LITTLE finance, and the supply audit
+  # showed finance_instruct and edgar have the epoch headroom to carry more.
+  # edgar is still capped BELOW finance_instruct even though it is far more
+  # abundant: SEC 10-K prose is corporate and formal, the wrong register for
+  # talking to a retail investor. It is here for financial vocabulary, risk
+  # articulation and quantitative discussion, not for tone. finance_instruct is
+  # the closest available register to an actual advisory exchange, so it carries
+  # the largest finance share despite needing ~3.5 epochs of repetition.
+  finance_domain:
+    share: 0.390
+    sources:
+      finance_instruct: {share: 0.240, max_epochs: 4.0}   # ~428 MiB, repeats ~3.5x
+      edgar:            {share: 0.108, max_epochs: 1.5}   # abundant, tone-capped
+      finance_alpaca:   {share: 0.022, max_epochs: 4.0}   # ~31 MiB, exhausted
+      sujet_finance:    {share: 0.017, max_epochs: 4.0}   # ~30 MiB only
+      wikipedia_finance: {share: 0.003, max_epochs: 2.0}  # only ~8 MiB survived
+      regulatory:       {share: 0.000, max_epochs: 4.0}   # v1 file lost; excluded
+
+  # --- Quantitative reasoning: 3.4% -----------------------------------------
+  # SIP maths, CAGR, real returns, expense drag. finance_numeracy is generated
+  # with every equation computed in Python and independently re-verified
+  # (62,005 equations, 0 mismatches), so unlike scraped text it cannot teach
+  # wrong arithmetic. Its 3.0% share is ~2.7 passes over the generated set --
+  # repeating the SAME verified passages, NOT generating more instances per
+  # template (which is the thing the generator caps, to avoid the marginal
+  # passage reinforcing the template rather than the method).
+  numeracy:
+    share: 0.034
+    sources:
+      finance_numeracy: {share: 0.030, max_epochs: 3.0}  # ~46 MiB, verified
+      gsm8k:            {share: 0.004, max_epochs: 4.0}  # ~4 MiB, worked steps
+
+  # --- Instruction following: 0.5% -----------------------------------------
+  # Small on purpose, and shrunk to what dolly's ~10 MiB can actually supply
+  # within 3 epochs. This is a PRETRAIN corpus; teaching the model to follow
+  # instructions is the SFT stage's job. A token share of instruction data here
+  # only establishes that request-then-answer is a shape English text can take.
+  instruction:
+    share: 0.005
+    sources:
+      dolly:            {share: 0.005, max_epochs: 3.0}
+
+# -----------------------------------------------------------------------------
+# Build-time assertions. The packer checks every one and refuses to write .bin
+# files if any fails. These exist because v1's failure was silent.
+# -----------------------------------------------------------------------------
+assertions:
+  shares_sum_to_one:        true    # group shares and source shares both
+  no_source_exceeds_epochs: true    # the check v1 did not have
+  min_finance_share:        0.28    # a v1-style collapse now fails the build
+  min_general_share:        0.50    # and so does over-rotating onto finance
+  no_val_train_overlap:     true    # verified by hash intersection, not assumed
+  numeracy_verified:        true    # verify_numeracy.py must have passed

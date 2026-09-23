@@ -1,0 +1,18 @@
+# MentraFiAI model architecture config
+# ~100M parameters — see model/config.py docstring for the param-count math
+model_name: "mentrafiai"
+
+vocab_size: 16000
+block_size: 1024          # context length
+
+n_layer: 14
+n_head: 12                # query heads
+n_kv_head: 4               # GQA — fewer KV heads than query heads (memory/compute savings)
+n_embd: 768
+
+mlp_ratio: 2.67            # SwiGLU hidden expansion
+
+dropout: 0.0           # 0.0 for pretrain (standard); finetune can set higher via its own config
+rope_theta: 10000.0
+
+init_std: 0.02

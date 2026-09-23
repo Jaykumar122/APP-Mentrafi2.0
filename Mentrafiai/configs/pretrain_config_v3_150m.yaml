@@ -1,0 +1,51 @@
+# MentraFiAI Pretrain Configuration — 150M Model (v3)
+# GPU: GTX 1650 (4GB VRAM)
+# New pretraining run from scratch for 150M model architecture
+
+pretrain:
+  # Training dynamics
+  batch_size: 1                       # GTX 1650 has no tensor cores — batch=1 is fastest
+  gradient_accumulation_steps: 128    # Effective batch = 1x128x1024 = 131,072 tokens
+  max_steps: 15000                    # 15,000 steps (~1.96B tokens)
+
+  # Learning rate schedule — reused schedule shape
+  learning_rate: 5.0e-4               # Standard learning rate
+  min_learning_rate: 5.0e-5           # 10x decay ratio
+  warmup_steps: 750                   # 5% of max_steps
+  weight_decay: 0.1
+  max_grad_norm: 1.0
+
+  # Precision and optimization
+  use_mixed_precision: false          # fp32 on GTX 1650 (no tensor cores)
+  gradient_checkpointing: true        # required: plain 150M peaks ~3.07GB and WDDM-spills on 4GB
+
+  # Evaluation and logging
+  eval_interval: 100                  # Check val_loss every 100 steps
+  eval_iters: 100
+  log_interval: 10
+
+  # Checkpoint saving
+  save_interval: 27                   # Checkpoint every 27 steps
+  checkpoint_dir: "./checkpoints/pretrain_v3_150m"
+  keep_last_n_checkpoints: 3
+
+  # Resume capability — fresh pretraining from step 0
+  init_from: "scratch"
+  resume_from: null
+
+  # Data — identical dataset split and tokenizer
+  train_data: "./data/processed/corpus_v2/train.bin"
+  val_data: "./data/processed/corpus_v2/val.bin"
+
+# Monitoring and safety
+monitoring:
+  heartbeat_file: "./training_heartbeat.txt"
+  heartbeat_interval: 10              # Steps between heartbeat updates
+  auto_save_on_interrupt: true        # Save checkpoint on Ctrl+C
+
+# Hardware-specific settings
+hardware:
+  device: "cuda"
+  compile: false
+  num_workers: 0                      # 0 prevents cudaErrorIllegalAddress on Windows (multiprocessing bug)
+  pin_memory: false                   # false prevents page-locked memory crashes

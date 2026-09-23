@@ -1,0 +1,33 @@
+# Python Bytecode and Cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Environments and Secrets
+.env
+.venv/
+env/
+venv/
+
+# IDE and Editor Cache
+.claude/
+.continue/
+.vscode/
+.idea/
+
+# Large Datasets & Checkpoints
+checkpoints/
+data/processed/
+data/raw/
+data/interim/
+
+# Temporary Logs, PIDs, and Heartbeats
+*.log
+*.pid
+*heartbeat*
+scratch/
+
+# Benchmark output dumps
+test_*results.json
+MentraFiAI_*Report.json

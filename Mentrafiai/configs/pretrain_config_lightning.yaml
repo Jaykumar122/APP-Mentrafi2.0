@@ -1,0 +1,59 @@
+# MentraFiAI Pretrain Configuration for Lightning AI
+# GPU: T4 (16GB VRAM, cloud platform)
+# Measured throughput: ~4,100+ tok/s (bf16, batch=8, grad_accum=16)
+# Target: 1.26B tokens (~24 hours)
+
+pretrain:
+  # Training dynamics
+  batch_size: 8                       # T4 can handle 8x batch
+  gradient_accumulation_steps: 16     # Effective batch = 131,072 tokens (same as GTX 1650)
+  max_steps: 9628                     # 1.26B tokens / 131,072 tok/step
+
+  # Learning rate schedule
+  learning_rate: 3.0e-4               # Same LR (same effective batch)
+  min_learning_rate: 3.0e-5           # 10x decay at end
+  warmup_steps: 481                   # 5% of training
+  weight_decay: 0.1
+  max_grad_norm: 1.0
+
+  # Precision and optimization
+  use_mixed_precision: true           # bf16 on T4 (tensor cores available)
+  gradient_checkpointing: false       # Not needed with larger batch
+
+  # Evaluation and logging
+  eval_interval: 200                  # Every 200 steps
+  eval_iters: 100
+  log_interval: 10
+
+  # Checkpoint saving (EVERY 2 HOURS)
+  save_interval: 660                  # ~660 steps ~= 2 hours on T4 (~330 steps/hr)
+  checkpoint_dir: "/teamspace/outputs/checkpoints/pretrain_v2"  # Lightning AI writable dir
+  keep_last_n_checkpoints: 3
+
+  # Resume capability
+  init_from: "scratch"
+  resume_from: null
+
+  # Data
+  train_data: "/teamspace/uploads/data/processed/corpus_v2/train.bin"
+  val_data: "/teamspace/uploads/data/processed/corpus_v2/val.bin"
+
+# Monitoring
+monitoring:
+  heartbeat_file: "./training_heartbeat.txt"
+  heartbeat_interval: 10
+  auto_save_on_interrupt: true
+
+# Hardware
+hardware:
+  device: "cuda"
+  compile: false
+  num_workers: 4
+  pin_memory: true
+
+# Expected performance (T4, bf16, batch=8, grad_accum=16)
+# Each optimizer step = 16 forward passes x 8 batch x 1024 tokens = 131,072 tokens
+# Throughput per step: ~32 seconds
+# Steps/hour: ~112
+# Tokens/hour: ~14.7M
+# Total: 9,628 steps x 131,072 = 1.262B tokens in ~24 hours (1 day)

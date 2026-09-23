@@ -1,0 +1,94 @@
+# =======================================================
+# MentraFi Ecosystem Root .gitignore
+# =======================================================
+
+# --- Strict User Exclusions: No .md, No .pdf, No Word docs ---
+*.md
+*.pdf
+*.docx
+*.doc
+*.pptx
+*.ppt
+
+# --- Critical / Secrets / Credentials / Environment ---
+.env
+.env.*
+*.env
+*.pem
+*.key
+*.cert
+*.crt
+*.pfx
+*.p12
+*.sqlite
+*.sqlite3
+*.db
+credentials*
+secret*
+
+# --- Frontend (React Native / Expo) ---
+frontend/node_modules/
+frontend/.expo/
+frontend/dist/
+frontend/build/
+frontend/web-build/
+frontend/*.log
+frontend/expo-env.d.ts
+
+# --- Backend (Node.js / Express / TypeScript) ---
+backend/node_modules/
+backend/dist/
+backend/build/
+backend/uploads/*
+!backend/uploads/.gitkeep
+backend/*.log
+
+# --- MentraFiAI (PyTorch / SLM / Large Datasets & Checkpoints) ---
+Mentrafiai/checkpoints/
+Mentrafiai/data/
+Mentrafiai/logs/
+Mentrafiai/scratch/
+Mentrafiai/.claude/
+Mentrafiai/.continue/
+Mentrafiai/.git_backup/
+Mentrafiai/*.jsonl
+Mentrafiai/*.bin
+Mentrafiai/*.pt
+Mentrafiai/*.pth
+Mentrafiai/*.safetensors
+Mentrafiai/*.onnx
+Mentrafiai/test_*results.json
+Mentrafiai/MentraFiAI_*Report.json
+Mentrafiai/*.pid
+Mentrafiai/*heartbeat*
+
+# --- Dependencies & Build Directories ---
+node_modules/
+.expo/
+dist/
+build/
+web-build/
+.next/
+.cache/
+
+# --- Python Environments & Caches ---
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.venv/
+venv/
+env/
+ENV/
+
+# --- Logs, System & Editor Temporary Files ---
+*.log
+logs/
+scratch/
+.DS_Store
+Thumbs.db
+~$*
+.vscode/
+.idea/
+.claude/
+.continue/

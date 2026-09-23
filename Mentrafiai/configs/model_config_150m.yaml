@@ -1,0 +1,21 @@
+# MentraFiAI model architecture config — 150M parameter variant
+# Increased capacity to break through val_loss plateau
+# ~150M parameters (up from 102M)
+
+model_name: "mentrafiai_150m"
+
+vocab_size: 16000
+block_size: 1024
+
+# INCREASED CAPACITY
+n_layer: 16              # 14 -> 16 layers
+n_head: 12
+n_kv_head: 4
+n_embd: 864              # 768 -> 864 (divisible by n_head=12)
+
+mlp_ratio: 2.67
+
+dropout: 0.0
+rope_theta: 10000.0
+
+init_std: 0.02
