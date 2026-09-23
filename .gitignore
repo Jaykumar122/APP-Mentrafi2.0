@@ -2,8 +2,9 @@
 # MentraFi Ecosystem Root .gitignore
 # =======================================================
 
-# --- Strict User Exclusions: No .md, No .pdf, No Word docs ---
+# --- Strict User Exclusions: No .md (except root README.md), No .pdf, No Word docs ---
 *.md
+!/README.md
 *.pdf
 *.docx
 *.doc
