@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import {
@@ -46,7 +46,7 @@ import {
   Wallet,
   X,
 } from "lucide-react-native";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -74,7 +74,7 @@ import Svg, { Defs, LinearGradient as SvgGrad, Path, Stop } from "react-native-s
 import { API_URL } from "../../utils/api";
 import { AuthBackground, C, depthShadow } from "../(auth)/login";
 import BottomNav from "./BottomNav";
-import { notifyProfileUpdated } from "../../utils/profileEvents";
+import { notifyProfileUpdated, subscribeProfileUpdates } from "../../utils/profileEvents";
 
 let Haptics: any = null;
 try {
@@ -290,9 +290,20 @@ export default function ProfileScreen() {
     occupation: "",
   });
 
+  useFocusEffect(
+    useCallback(() => {
+      fetchProfile();
+      fetchTransactions("ALL");
+    }, [])
+  );
+
   useEffect(() => {
-    fetchProfile();
-    fetchTransactions("ALL");
+    const unsubscribe = subscribeProfileUpdates(() => {
+      fetchProfile();
+    });
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -741,6 +752,13 @@ export default function ProfileScreen() {
 
   const displayDob = formatDisplayDob(profile?.personalInfo?.dateOfBirth);
 
+  const portfolioVal = profile?.stats?.portfolioValue ?? 0;
+  const portfolioReturn = profile?.stats?.portfolioReturnPercent ?? 0;
+  const activeSipsCount = profile?.stats?.activeSips ?? 0;
+  const monthlySipAmt = profile?.stats?.monthlySipAmount ?? 0;
+  const monthlyBudget = profile?.personalInfo?.monthlySipBudget ? Number(profile.personalInfo.monthlySipBudget) : 0;
+  const fundsHeldCount = profile?.stats?.fundsHeld ?? 0;
+
   // ─────────────────────────────────────────────────────────────
   // FULL SCREEN AVATAR CROP MODAL
   // ─────────────────────────────────────────────────────────────
@@ -1067,6 +1085,7 @@ export default function ProfileScreen() {
                   borderTopColor: "rgba(255, 255, 255, 0.07)",
                 }}
               >
+                {/* 1. PORTFOLIO CARD */}
                 <View
                   style={{
                     flex: 1,
@@ -1079,13 +1098,22 @@ export default function ProfileScreen() {
                 >
                   <Text style={{ color: C.textFaint, fontSize: 10, fontWeight: "600" }}>PORTFOLIO</Text>
                   <Text style={{ color: "#fff", fontSize: 16, fontWeight: "800", marginTop: 4 }}>
-                    ₹{(profile?.stats?.portfolioValue ?? 0).toLocaleString("en-IN")}
+                    ₹{portfolioVal.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
                   </Text>
-                  <Text style={{ color: GREEN, fontSize: 10, fontWeight: "700", marginTop: 2 }}>
-                    +{(profile?.stats?.portfolioReturnPercent ?? 0).toFixed(1)}% Returns
+                  <Text
+                    style={{
+                      color: portfolioReturn >= 0 ? GREEN : RED,
+                      fontSize: 10,
+                      fontWeight: "700",
+                      marginTop: 2,
+                    }}
+                  >
+                    {portfolioReturn > 0 ? "+" : ""}
+                    {portfolioReturn.toFixed(1)}% Returns
                   </Text>
                 </View>
 
+                {/* 2. ACTIVE SIPS CARD */}
                 <View
                   style={{
                     flex: 1,
@@ -1098,13 +1126,18 @@ export default function ProfileScreen() {
                 >
                   <Text style={{ color: C.textFaint, fontSize: 10, fontWeight: "600" }}>ACTIVE SIPS</Text>
                   <Text style={{ color: "#fff", fontSize: 16, fontWeight: "800", marginTop: 4 }}>
-                    {profile?.stats?.activeSips ?? 0} Plans
+                    {activeSipsCount} {activeSipsCount === 1 ? "Plan" : "Plans"}
                   </Text>
                   <Text style={{ color: CYAN, fontSize: 10, fontWeight: "700", marginTop: 2 }}>
-                    ₹{profile?.personalInfo?.monthlySipBudget ?? 5000} / mo
+                    {activeSipsCount > 0
+                      ? `₹${monthlySipAmt.toLocaleString("en-IN")} / mo`
+                      : monthlyBudget > 0
+                      ? `₹${monthlyBudget.toLocaleString("en-IN")} budget`
+                      : "0 / mo"}
                   </Text>
                 </View>
 
+                {/* 3. FUNDS HELD CARD */}
                 <View
                   style={{
                     flex: 1,
@@ -1117,7 +1150,7 @@ export default function ProfileScreen() {
                 >
                   <Text style={{ color: C.textFaint, fontSize: 10, fontWeight: "600" }}>FUNDS HELD</Text>
                   <Text style={{ color: "#fff", fontSize: 16, fontWeight: "800", marginTop: 4 }}>
-                    {profile?.stats?.fundsHeld ?? 0} Direct
+                    {fundsHeldCount} Direct
                   </Text>
                   <Text style={{ color: "#a78bfa", fontSize: 10, fontWeight: "700", marginTop: 2 }}>
                     0% Commission

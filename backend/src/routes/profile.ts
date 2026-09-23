@@ -33,6 +33,69 @@ const upload = multer({
   },
 });
 
+// Helper: Calculate live portfolio and active SIP stats directly from DB
+async function getProfileStats(userId?: number) {
+  if (!userId) {
+    return {
+      portfolioValue: 0,
+      portfolioReturnPercent: 0,
+      activeSips: 0,
+      monthlySipAmount: 0,
+      fundsHeld: 0,
+    };
+  }
+  try {
+    const portfolioResult = await pool.query(
+      `SELECT 
+         COALESCE(SUM(up.units * COALESCE(f.nav, up.avg_purchase_nav, 0)), 0) AS total_value,
+         COALESCE(SUM(up.invested_amount), 0) AS total_invested,
+         COUNT(DISTINCT up.scheme_code) AS funds_held
+       FROM user_portfolio up
+       LEFT JOIN funds f ON f.scheme_code = up.scheme_code
+       WHERE up.user_id = $1 AND up.units > 0`,
+      [userId]
+    );
+
+    const pRow = portfolioResult.rows[0];
+    const portfolioValue = Number(Number(pRow?.total_value || 0).toFixed(2));
+    const totalInvested = Number(pRow?.total_invested || 0);
+    const portfolioReturnPercent = totalInvested > 0
+      ? Number((((portfolioValue - totalInvested) / totalInvested) * 100).toFixed(2))
+      : 0;
+    const fundsHeld = Number(pRow?.funds_held || 0);
+
+    const sipResult = await pool.query(
+      `SELECT 
+         COUNT(*) AS active_sips,
+         COALESCE(SUM(monthly_amount), 0) AS monthly_sip_amount
+       FROM sips
+       WHERE user_id = $1 AND LOWER(status) = 'active'`,
+      [userId]
+    );
+
+    const sRow = sipResult.rows[0];
+    const activeSips = Number(sRow?.active_sips || 0);
+    const monthlySipAmount = Number(Number(sRow?.monthly_sip_amount || 0).toFixed(2));
+
+    return {
+      portfolioValue,
+      portfolioReturnPercent,
+      activeSips,
+      monthlySipAmount,
+      fundsHeld,
+    };
+  } catch (err) {
+    console.error("Error calculating profile stats:", err);
+    return {
+      portfolioValue: 0,
+      portfolioReturnPercent: 0,
+      activeSips: 0,
+      monthlySipAmount: 0,
+      fundsHeld: 0,
+    };
+  }
+}
+
 // ---------------------------------------------------------------------------
 // GET /api/profile — current user's info + portfolio stats
 // ---------------------------------------------------------------------------
@@ -56,14 +119,8 @@ router.get("/", authenticateToken, async (req: AuthRequest, res) => {
 
     const dateOfBirth = personalInformation?.date_of_birth || null;
 
-    // Portfolio/SIP stats — placeholder zeros until portfolio/sip tables exist.
-    const stats = {
-      portfolioValue: 0,
-      portfolioReturnPercent: 0,
-      activeSips: 0,
-      monthlySipAmount: 0,
-      fundsHeld: 0,
-    };
+    // Calculate live portfolio & SIP stats directly from DB
+    const stats = await getProfileStats(req.userId);
 
     res.json({
       id: user.id,
@@ -228,6 +285,8 @@ router.patch("/", authenticateToken, async (req: AuthRequest, res) => {
       const personalInformation = personalInformationResult.rows[0] ?? null;
       const user = userResult.rows[0];
 
+      const stats = await getProfileStats(req.userId);
+
       res.json({
         id: user.id,
         name: user.name,
@@ -235,6 +294,8 @@ router.patch("/", authenticateToken, async (req: AuthRequest, res) => {
         avatarUrl: user.avatar_url,
         kycStatus: user.kyc_status,
         tier: user.tier,
+        memberSince: user.created_at,
+        stats,
         personalInfo: {
          fullName: personalInformation?.full_name ?? user.name,
          phone: personalInformation?.phone ?? null,
