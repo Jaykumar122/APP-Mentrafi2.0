@@ -20,7 +20,7 @@ Unlike generic foundation models that hallucinate tax rules and suffer from comp
 
 ---
 
-[How It Works](#-how-mentrafi-works-end-to-end) • [AMFI & mfapi.in Engine](#-amfi-live--mfapiin-dual-stream-data-pipeline) • [Tri-Network AI Architecture](#-the-tri-network-ai-intelligence-core) • [System Architecture](#-system-architecture) • [Quickstart Guide](#-quickstart-guide) • [Model Weights](#-model-weights--checkpoints) • [API Overview](#-api-endpoints)
+[How It Works](#-how-mentrafi-works-end-to-end) • [App Preview](#-app-experience--screenshots) • [AMFI & mfapi.in Engine](#-amfi-live--mfapiin-dual-stream-data-pipeline) • [Tri-Network AI Architecture](#-the-tri-network-ai-intelligence-core) • [System Architecture](#-system-architecture) • [Quickstart Guide](#-quickstart-guide) • [Model Weights](#-model-weights--checkpoints) • [API Overview](#-api-endpoints)
 
 ---
 
@@ -74,6 +74,117 @@ MentraFi operates as an integrated four-tier pipeline where user intent is conve
 │  • User clicks "Invest Now" or "Start SIP" -> written to double-entry ledger.         │
 └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## 📱 App Experience & Screenshots
+
+<div align="center">
+
+### 🌟 1. Onboarding & Core Philosophy
+*Designed with a luxury Obsidian & Aurora glassmorphism UI, guiding investors toward direct mutual fund compounding.*
+
+<table>
+  <tr>
+    <td align="center" width="33.3%">
+      <img src="docs/screenshots/01_onboarding_welcome.png" width="100%" alt="Direct Mutual Funds" /><br />
+      <b>Direct Mutual Funds</b><br />
+      <sub>SEBI Direct-Growth Invariant</sub>
+    </td>
+    <td align="center" width="33.3%">
+      <img src="docs/screenshots/02_onboarding_compounding.png" width="100%" alt="Zero Intermediaries" /><br />
+      <b>Zero Intermediaries</b><br />
+      <sub>100% Capital Conservation</sub>
+    </td>
+    <td align="center" width="33.3%">
+      <img src="docs/screenshots/03_onboarding_ai_core.png" width="100%" alt="Neuro-Symbolic AI" /><br />
+      <b>Neuro-Symbolic AI Core</b><br />
+      <sub>99.5% Compounding Math Fidelity</sub>
+    </td>
+  </tr>
+</table>
+
+---
+
+### 📊 2. Portfolio Valuation, Analytics & Verified Profile
+*Live portfolio aggregation connected directly to PostgreSQL tables (`user_portfolio`, `sips`, `funds`), with asset allocation donuts and verified KYC details.*
+
+<table>
+  <tr>
+    <td align="center" width="33.3%">
+      <img src="docs/screenshots/06_home_dashboard.png" width="100%" alt="Home Dashboard" /><br />
+      <b>Home Dashboard</b><br />
+      <sub>Live Valuation, AI Copilot & Market Pulse</sub>
+    </td>
+    <td align="center" width="33.3%">
+      <img src="docs/screenshots/10_portfolio_analytics.png" width="100%" alt="Portfolio Analytics" /><br />
+      <b>Portfolio Analytics</b><br />
+      <sub>Asset Allocation & AI Fiduciary Diagnostic</sub>
+    </td>
+    <td align="center" width="33.3%">
+      <img src="docs/screenshots/14_profile_kyc.png" width="100%" alt="Investor Profile & KYC" /><br />
+      <b>Investor Profile & KYC</b><br />
+      <sub>Live DB Stat Cards & Verified Profile</sub>
+    </td>
+  </tr>
+</table>
+
+---
+
+### 🧠 3. AI Wealth Advisory & Financial Screener
+*Real-time token-streamed fiduciary advisory powered by MentraFiAI Core alongside live AMFI scheme discovery.*
+
+<table>
+  <tr>
+    <td align="center" width="33.3%">
+      <img src="docs/screenshots/13_ai_advisor_chat.png" width="100%" alt="MentraFi AI Advisor" /><br />
+      <b>MentraFi AI Advisor</b><br />
+      <sub>Tri-Network Fiduciary Chat Copilot</sub>
+    </td>
+    <td align="center" width="33.3%">
+      <img src="docs/screenshots/08_sip_calculator.png" width="100%" alt="SIP & Wealth Calculator" /><br />
+      <b>SIP & Wealth Calculator</b><br />
+      <sub>Ordinary Annuity, Step-Up & Inflation Math</sub>
+    </td>
+    <td align="center" width="33.3%">
+      <img src="docs/screenshots/11_explore_funds.png" width="100%" alt="Explore Mutual Funds" /><br />
+      <b>Explore Mutual Funds</b><br />
+      <sub>Screener with 14,361+ AMFI Schemes</sub>
+    </td>
+  </tr>
+</table>
+
+---
+
+### 💳 4. Order Execution, Recurring SIPs & Authentication
+*Instant UPI-based fund purchases with estimated units allotment, automated SIP mandate tracking, and encrypted biometric authentication.*
+
+<table>
+  <tr>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/09_lumpsum_investment.png" width="100%" alt="Direct Investment" /><br />
+      <b>Direct Purchase</b><br />
+      <sub>Instant UPI & NAV Units</sub>
+    </td>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/07_active_sips.png" width="100%" alt="SIP Mandates" /><br />
+      <b>SIP Tracker</b><br />
+      <sub>Automated Morning Ledger</sub>
+    </td>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/04_login.png" width="100%" alt="Investor Login" /><br />
+      <b>Secure Login</b><br />
+      <sub>JWT & Biometric Auth</sub>
+    </td>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/05_signup.png" width="100%" alt="Account Setup" /><br />
+      <b>Instant Registration</b><br />
+      <sub>3-Minute Onboarding</sub>
+    </td>
+  </tr>
+</table>
+
+</div>
 
 ---
 
@@ -339,6 +450,9 @@ Scan the QR code with **Expo Go** (Android) or the **Camera app** (iOS) to exper
 
 ```
 APP-Mentrafi2.0/
+├── docs/                      # Documentation & Application Media Assets
+│   └── screenshots/           # High-resolution mobile experience screenshots
+│
 ├── frontend/                  # React Native / Expo SDK 54 Client
 │   ├── app/                   # Expo Router screens ((auth), (tabs), profile-setup)
 │   ├── assets/images/         # 3D assets, logos, and branding illustrations
