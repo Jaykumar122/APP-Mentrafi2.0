@@ -62,7 +62,7 @@ MentraFi operates as an integrated four-tier pipeline where user intent is conve
 │  └───────────────────────────────────────────┬─────────────────────────────────────┘  │
 │                                              ▼                                         │
 │  ┌─────────────────────────────────────────────────────────────────────────────────┐  │
-│  │ Network 3: Generative Fiduciary SLM (102.5M) -> Token Streaming + Fund Cards    │  │
+│  │ Network 3: llm120 Fiduciary SLM (120.05M) -> Token Streaming + Fund Cards       │  │
 │  └─────────────────────────────────────────────────────────────────────────────────┘  │
 └───────────────────────────────────────────┬────────────────────────────────────────────┘
                                             │ Streaming Tokens + Structured Fund JSON
@@ -221,6 +221,7 @@ A central foundation of MentraFi is its **dual-source data pipeline** combining 
 - **Ultra-Fast Batch Upsert Engine:** Ingests **37,882+ mutual fund schemes** (including **14,361+ live active schemes**) nightly in **~1.03 seconds**.
 - **PostgreSQL Typed `UNNEST` Architecture:** Rather than executing thousands of discrete `UPDATE` statements, `amfiSync.ts` streams and parses the official semicolon-delimited feed in memory, transforms rows into columnar arrays, and executes a single atomic PostgreSQL `UNNEST` bulk upsert.
 - **Dual ISIN Extraction:** Simultaneously parses ISIN Div Payout and ISIN Growth fields, achieving **98.8% ISIN match coverage**.
+- **SEBI Scheme Categories** (`backend/src/services/fundCategory.ts`): every scheme gets its official SEBI category from the AMFI section header (e.g. *Equity Scheme - Multi Cap Fund*), so Flexi Cap, Multi Cap, Large & Mid Cap, Index, ETF, Liquid, Arbitrage and the other categories are never mixed. `category` keeps the app's five filters (Equity, Debt, Hybrid, ELSS, Gold). The `mfapi.in` sync never overwrites an AMFI label. Re-label existing rows with `npm run fix:categories -- --dry-run` (review) / `npm run fix:categories` (apply; old labels kept in `funds_category_backup`, restore with `--restore`).
 - **Fiduciary Quarantine Mechanism (`is_active = TRUE`):** Automatically detects dead, matured, merged, or liquidating schemes and isolates them into a quarantine partition. MentraFiAI and the Explore Screener **only recommend schemes where `is_active = TRUE`**, guaranteeing users are never guided toward terminated funds.
 
 ### 2. High-Frequency `mfapi.in` Integration (`api.mfapi.in`)
@@ -261,7 +262,7 @@ Generic LLMs fail critically in financial advisory: they suffer from arithmetic 
                               ┌─────────────────────────────┐
                               │  Symbolic Mathematical      │
                               │  & Capital Gains Engine     │
-                              │  (Deterministic C++ / Py)   │
+                              │  (Deterministic Python)     │
                               └──────────────┬──────────────┘
                                              │ Exact Future Value,
                                              │ Section 112A Tax, 80C Caps
@@ -275,7 +276,7 @@ Generic LLMs fail critically in financial advisory: they suffer from arithmetic 
                               ┌─────────────────────────────┐
                               │          Network 3          │
                               │   Generative Fiduciary SLM  │
-                              │       (102.5M Params)       │
+                              │   llm120 (120.05M Params)   │
                               └──────────────┬──────────────┘
                                              │
                                              ▼
@@ -286,15 +287,9 @@ Generic LLMs fail critically in financial advisory: they suffer from arithmetic 
 - **Role:** High-speed query classification and investor risk stratification.
 - **Latency:** **< 10ms** on CUDA / CPU.
 - **Architecture:** Transformer bi-encoder with mean-pooling over contextual embeddings and multi-class classification heads.
-- **Core Intents Detected:**
-  - `SIP_CALCULATION` — Systematic investment inquiries.
-  - `PORTFOLIO_RECOMMENDATION` — Multi-asset allocation and fund basket requests.
-  - `TAX_SAVING_ELSS` — Section 80C optimization.
-  - `RETIREMENT_PLANNING` — Long-term horizon capital accumulation.
-  - `FUND_COMPARISON` — Direct scheme head-to-head evaluation.
-  - `NAV_LOOKUP` — Net Asset Value and trailing CAGR inquiries.
-  - `GENERAL_CONVERSATIONAL` — Financial concept explanations and glossaries.
-- **Risk Stratification Head:** Maps sentiment to SEBI risk categories (`Low`, `Moderate`, `High`, `Very High`).
+- **Intents detected** (`model/classifier.py`): `GREETING`, `DEFINITION`, `PORTFOLIO_RECOMMENDATION`, `FUND_COMPARISON`, `GOAL_PLANNING`, `GENERAL_CHAT`.
+- **Extra heads:** risk appetite (`CONSERVATIVE`, `MODERATE`, `AGGRESSIVE`, `UNKNOWN`) and horizon class (`SHORT_TERM`, `MEDIUM_TERM`, `LONG_TERM`, `UNKNOWN`).
+- **Routing:** a confident `PORTFOLIO_RECOMMENDATION` with a budget goes to the advisor route (allocation + fund cards + Network 3); explicit "calculate / corpus / tax / lump sum" questions go to the math engine; concept questions go to the reviewed curriculum (see Network 3).
 
 ### Network 2: BIO Token-Level Slot Parser (15.26M Parameters)
 - **Role:** Sub-word entity extraction using BIO (Beginning-Inside-Outside) sequence tagging.
@@ -307,25 +302,28 @@ Generic LLMs fail critically in financial advisory: they suffer from arithmetic 
 - **Colloquial Indian Number Normalizer:** Natively translates colloquial expressions: `"15k"` $\rightarrow$ ₹15,000, `"2.5L" / "2.5 lakh"` $\rightarrow$ ₹2,50,000, `"1 cr"` $\rightarrow$ ₹1,00,00,000.
 
 ### Deterministic Closed-Form Symbolic Solver
-Before Network 3 generates text, all calculations are offloaded to a deterministic mathematical solver:
-- **Ordinary Annuity Future Value (SIP):**
+Before Network 3 generates text, all calculations are offloaded to `Mentrafiai/inference/financial_calculator.py` (the app's SIP calculator uses the same formulas in `frontend/utils/sipMath.ts`; `python check_app_calculator.py` compares both over 768 input combinations):
+- **SIP future value, installment at the start of each month (annuity due), monthly rate = yearly rate / 12:**
   $$FV = P \times \frac{(1 + r)^n - 1}{r} \times (1 + r)$$
   *(where $P$ is monthly installment, $r$ is monthly interest rate, $n$ is total months).*
-- **Annual Step-Up SIP Engine:** Computes non-linear compounding where installments increase by $S\%$ annually.
+- **Annual Step-Up SIP Engine:** installments rise by $S\%$ after every 12 installments; the goal planner solves the exact starting SIP for a target.
+- **Also:** goal SIP (rounded up to the next rupee), lump sum, SWP, CAGR, inflation-adjusted value (6%) and real return.
 - **Finance Act 2024–2026 Indian Tax Matrix:**
   - **Equity Mutual Funds:** Section 112A Long Term Capital Gains (LTCG) taxed at **12.5%** on gains exceeding **₹1.25 Lakh/year** (held > 12 months). Short Term Capital Gains (STCG) taxed at **20%** (Section 111A).
-  - **Debt Mutual Funds:** Section 50AA specifies no indexation benefit; capital gains added directly to investor income and taxed at applicable income tax slab rates.
+  - **Debt Mutual Funds (bought on or after 1 April 2023):** Section 50AA, gains taxed at the investor's slab rate regardless of holding period.
+  - **Other funds** (e.g. hybrids with 35–65% equity): 12.5% after 24 months, slab rate otherwise. 4% cess applies; surcharge, the 87A rebate and loss set-off are not modelled.
   - **Section 80C Deductions:** Strict ₹1,50,000 annual ceiling enforcement on ELSS Tax Saver allocations.
 
-### Network 3: Autoregressive Fiduciary SLM (102.5M Parameters)
-- **Role:** Generates conversational explanations, portfolio rationales, and structured fund recommendation payloads.
-- **Specifications:**
-  - **Architecture:** 102.5M parameters, 12 layers, 12 attention heads, hidden dimension 768.
-  - **Positional Encoding:** Rotary Position Embeddings (RoPE) for extended contextual reasoning.
-  - **Activations & Norm:** SwiGLU non-linearities and RMSNorm for stable gradient dynamics.
-  - **Vocabulary:** Custom 16,000-token SentencePiece BPE tokenizer trained on Indian financial, tax, and regulatory corpora.
-- **Fiduciary Direct-Growth Invariant:** The network is constrained never to recommend distributor/regular commission plans. All scheme codes emitted point to zero-commission Direct Growth variants.
-- **Streaming Token Protocol:** Streams tokens via Server-Sent Events (SSE) while synchronously yielding structured `recommendedFunds` cards for UI action buttons.
+### Network 3: llm120, a 120M Model Trained From Scratch
+- **Role:** writes the explanation for portfolio plans, goal and SIP answers, fund comparisons and concept questions, using only the verified context it is given.
+- **Architecture** (`Mentrafiai/llm120/`): decoder-only Transformer, **120,054,528 parameters**, 16 layers, hidden size 768, 12 query / 4 KV heads (grouped-query attention), SwiGLU, RoPE, RMSNorm, 1,024-token context, tied embeddings, custom 16,000-token SentencePiece tokenizer.
+- **Pretraining** (Kaggle, 2× T4 with PyTorch DDP, 19,000 updates × 65,536 tokens): 1.18B tokens, **32% Indian mutual-fund text** (SEBI / AMFI investor pages, Wikipedia Indian-finance articles, one document per active scheme built from AMFI NAV data, worked examples from the math engine) and 68% FineWeb-Edu English. Best validation loss 1.571.
+- **Fine-tuning:** 2,431 conversations: 91 reviewed mutual-fund topics plus 2,400 grounded pipeline examples that use real scheme names and NAV-based returns. Each grounded example has a "verified context" (intent, risk, slots, exact engine numbers, allocation, fund candidates) and an answer that only copies those facts. Best validation loss 0.060.
+- **Measured quality** (`python eval_network3.py --limit 150`, 150 held-out grounded questions): **97.3% usable answers** (portfolio 99%, SIP / goal / tax 100%, comparisons 84%); 99.3% of answers contain only numbers from the verified context.
+- **Safety checks on every reply** (`serve.py`): a reply is rejected, and the exact engine text is shown instead, if it contains a number not in the context, an invented investor name, a scheme that was not retrieved, a stated expense ratio / riskometer / AUM value, or leaves out the budget, invested amount or projected corpus.
+- **Concept questions** ("what is SIP?", "SIP vs lump sum", "direct vs regular"): `inference/definition_router.py` maps the question to one of the 91 reviewed topics and asks the model in its trained wording. The reply is shown only if it matches the reviewed answer; otherwise the reviewed answer itself is shown. In current tests the model usually drifts on free-form definitions, so most concept answers come from the reviewed text.
+- **Limits:** open questions ("why do markets fall?") get a polite "can't answer reliably" reply. A 120M model is not a general financial chatbot.
+- **Train it yourself:** see [`Mentrafiai/KAGGLE.md`](Mentrafiai/KAGGLE.md) (one command per stage; resumes across Kaggle's 12-hour sessions) and [`Mentrafiai/README.md`](Mentrafiai/README.md) for the data and training details.
 
 ---
 
@@ -338,7 +336,7 @@ Before Network 3 generates text, all calculations are offloaded to a determinist
 │  • Obsidian & Aurora Dark Glassmorphic Design                               │
 │  • Real-Time Portfolio Valuation & Database-Synchronized Stat Cards         │
 │  • AI Advisor Chat (Real-time SSE Token Streaming & Scheme Action Cards)    │
-│  • Interactive Compounding Calculators (Regular, Step-Up, Lumpsum, Goal)    │
+│  • SIP Calculator: SIP, Step-Up, Lump Sum, Goal, growth chart & yearly table│
 │  • SVG Interactive NAV Performance Graphs (1M, 3M, 6M, 1Y, 3Y, 5Y, ALL)    │
 └───────────────────────────────────────┬─────────────────────────────────────┘
                                         │ HTTP REST & SSE (/api/*)
@@ -359,7 +357,7 @@ Before Network 3 generates text, all calculations are offloaded to a determinist
 │            (14 Tables)               │     │   PyTorch / CUDA (Port 8000)   │
 │ • funds (37,882+ AMFI Schemes)       │     │ • Network 1: Classifier 10.65M │
 │   - 14,361+ Live (is_active = TRUE)  │◄────┤ • Network 2: Slot Parser 15.26M│
-│   - Quarantine Partition (Closed)    │     │ • Network 3: Generative 102.5M │
+│   - Quarantine Partition (Closed)    │     │ • Network 3: llm120 120.05M    │
 │ • fund_performance (Historical CAGR) │     │ • Closed-Form Symbolic Solver  │
 │ • user_portfolio, sips, transactions │     │ • Fiduciary RAG Invariant      │
 │ • personal_information & KYC data    │     └────────────────────────────────┘
@@ -370,14 +368,16 @@ Before Network 3 generates text, all calculations are offloaded to a determinist
 
 ## 📦 Model Weights & Checkpoints
 
-All model checkpoints and tokenizers are publicly accessible on **GitHub Releases** and **Hugging Face**:
+Download from **[GitHub Release v2.0.0](https://github.com/Jaykumar122/APP-Mentrafi2.0/releases/tag/v2.0.0)**, or run `python download_checkpoints.py` inside `Mentrafiai/`:
 
-| Model Component | Parameter Count | Format | Primary Checkpoint File | Download Links |
-| :--- | :---: | :---: | :--- | :--- |
-| **Network 1: Classifier** | **10.65M** | PyTorch (`.pt`) | `checkpoints/classifier/best_classifier.pt` | [Release v1.0.0](https://github.com/Jaykumar122/APP-Mentrafi2.0/releases/tag/v1.0.0) / [Hugging Face](https://huggingface.co/singh0123/MentraFiAI-TriNetwork) |
-| **Network 2: Slot Parser** | **15.26M** | PyTorch (`.pt`) | `checkpoints/query_parser/best_parser_net.pt` | [Release v1.0.0](https://github.com/Jaykumar122/APP-Mentrafi2.0/releases/tag/v1.0.0) / [Hugging Face](https://huggingface.co/singh0123/MentraFiAI-TriNetwork) |
-| **Network 3: Generative SLM** | **102.5M** | PyTorch (`.pt`) | `checkpoints/finetune_v5/best_model.pt` | [Release v1.0.0](https://github.com/Jaykumar122/APP-Mentrafi2.0/releases/tag/v1.0.0) / [Hugging Face](https://huggingface.co/singh0123/MentraFiAI-TriNetwork) |
-| **BPE Tokenizer (16K)** | — | SentencePiece | `tokenizer/tokenizer_v2.model` | [Release v1.0.0](https://github.com/Jaykumar122/APP-Mentrafi2.0/releases/tag/v1.0.0) / [Hugging Face](https://huggingface.co/singh0123/MentraFiAI-TriNetwork) |
+| Model Component | Parameters | Release asset | Saved as |
+| :--- | :---: | :--- | :--- |
+| **Network 1: Classifier** | 10.65M | `best_classifier.pt` | `checkpoints/classifier/best_classifier.pt` |
+| **Network 2: Slot Parser** | 15.26M | `best_parser_net.pt` | `checkpoints/query_parser/best_parser_net.pt` |
+| **Network 3: llm120 (fine-tuned)** | **120.05M** | `llm120_sft_best.pt` (weights only, 505 MB) | `checkpoints/llm120_sft/best.pt` |
+| **SentencePiece tokenizer (16K)** | — | `tokenizer_v2.model`, `tokenizer_v2.vocab` | `tokenizer/` |
+
+The legacy 102.5M model (`best_model.pt`) remains in [Release v1.0.0](https://github.com/Jaykumar122/APP-Mentrafi2.0/releases/tag/v1.0.0); `serve.py` uses it only when no llm120 checkpoint is present.
 
 ---
 
@@ -418,20 +418,21 @@ npm run dev
    pip install -r requirements.txt
    ```
 
-2. **Download Checkpoints:**
-   Automatically fetch all 3 trained networks and tokenizers from GitHub / Hugging Face:
+2. **Download Checkpoints** (Networks 1–3 and the tokenizer from Release v2.0.0):
    ```bash
    python download_checkpoints.py
    ```
-
 3. Launch the FastAPI inference server:
    ```bash
    python serve.py
    ```
 
-To run diagnostic validation across Networks 1 and 2:
+To check the system:
 ```bash
-python test_networks_1_2.py
+python -m pytest tests_llm120 -q        # math engine, tokenizer, model, training, grounding, routing
+python check_query.py "I am 23, want to invest 5000 monthly SIP for 15 years with moderate risk"
+python eval_network3.py --limit 150     # Network 3 quality on held-out questions
+python check_app_calculator.py          # app SIP calculator vs Python engine
 ```
 
 ---
