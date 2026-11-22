@@ -4,7 +4,7 @@
 
 ### Autonomous AI-Powered Direct Mutual Fund Investment & Advisory Platform
 
-[![GitHub Release](https://img.shields.io/github/v/release/Jaykumar122/APP-Mentrafi2.0?color=8b5cf6&label=Release&logo=github)](https://github.com/Jaykumar122/APP-Mentrafi2.0/releases/tag/v1.0.0)
+[![GitHub Release](https://img.shields.io/github/v/release/Jaykumar122/APP-Mentrafi2.0?color=8b5cf6&label=Release&logo=github)](https://github.com/Jaykumar122/APP-Mentrafi2.0/releases/tag/v2.0.0)
 [![React Native](https://img.shields.io/badge/React%20Native-Expo%2054-blue?logo=react)](https://reactnative.dev/)
 [![Backend](https://img.shields.io/badge/Node.js-Express%20%2B%20TypeScript-green?logo=node.js)](https://nodejs.org/)
 [![AI Engine](https://img.shields.io/badge/PyTorch-CUDA%20Accelerated-EE4C2C?logo=pytorch)](https://pytorch.org/)
