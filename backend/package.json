@@ -9,6 +9,7 @@
     "sync:fast": "tsx src/scripts/syncFast.ts",
     "sync:seed": "tsx src/scripts/seedFunds.ts",
     "sync:amfi": "tsx src/scripts/syncAmfi.ts",
+    "fix:categories": "tsx src/scripts/fixCategories.ts",
     "build": "tsc",
     "start": "node dist/index.js"
   },

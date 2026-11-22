@@ -1,26 +1,12 @@
 // src/services/fundSync.ts
 import pool from "../config/db";
+import { classifyFund } from "./fundCategory";
 
 const MFAPI_BASE = "https://api.mfapi.in/mf";
 
 let isSyncing = false;
 export function isSyncRunning() {
   return isSyncing;
-}
-
-function classify(name: string): { category: string; subcategory: string } {
-  const n = name.toLowerCase();
-  if (n.includes("elss") || n.includes("tax saver")) return { category: "ELSS", subcategory: "Tax Saving" };
-  if (n.includes("gold")) return { category: "Gold", subcategory: "Gold" };
-  if (n.includes("debt") || n.includes("bond") || n.includes("liquid") || n.includes("duration") || n.includes("gilt"))
-    return { category: "Debt", subcategory: "Debt Fund" };
-  if (n.includes("hybrid") || n.includes("balanced") || n.includes("advantage"))
-    return { category: "Hybrid", subcategory: "Balanced" };
-  if (n.includes("small cap")) return { category: "Equity", subcategory: "Small Cap" };
-  if (n.includes("mid cap")) return { category: "Equity", subcategory: "Mid Cap" };
-  if (n.includes("large cap") || n.includes("bluechip")) return { category: "Equity", subcategory: "Large Cap" };
-  if (n.includes("flexi cap") || n.includes("multi cap")) return { category: "Equity", subcategory: "Flexi Cap" };
-  return { category: "Equity", subcategory: "Diversified" };
 }
 
 function detectPlanType(name: string): { planType: string; optionType: string } {
@@ -152,7 +138,7 @@ export async function syncScheme(schemeCode: number) {
   const latestNav = navHistory[0] ? parseFloat(navHistory[0].nav) : null;
   const latestDate = navHistory[0]?.date ? toPostgresDate(navHistory[0].date) : null;
   const launchDate = extractLaunchDate(navHistory);
-  const { category, subcategory } = classify(name);
+  const { category, subcategory } = classifyFund(name);
   const { planType, optionType } = detectPlanType(name);
   const returns = computeAllReturns(navHistory);
 
@@ -160,7 +146,11 @@ export async function syncScheme(schemeCode: number) {
     `INSERT INTO funds (scheme_code, name, category, subcategory, nav, nav_date, one_year_return, plan_type, option_type, fund_house, launch_date, updated_at)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
      ON CONFLICT (scheme_code) DO UPDATE SET
-       name = EXCLUDED.name, category = EXCLUDED.category, subcategory = EXCLUDED.subcategory,
+       name = EXCLUDED.name,
+       -- mfapi.in has no SEBI category; keep the label from the official AMFI sync and
+       -- only fill it in when it is still a generic placeholder.
+       category = CASE WHEN funds.subcategory IN ('Diversified', 'General') THEN EXCLUDED.category ELSE funds.category END,
+       subcategory = CASE WHEN funds.subcategory IN ('Diversified', 'General') THEN EXCLUDED.subcategory ELSE funds.subcategory END,
        nav = EXCLUDED.nav, nav_date = EXCLUDED.nav_date, one_year_return = EXCLUDED.one_year_return,
        plan_type = EXCLUDED.plan_type, option_type = EXCLUDED.option_type,
        fund_house = EXCLUDED.fund_house, launch_date = EXCLUDED.launch_date,
@@ -272,8 +262,8 @@ export async function syncAllFundsFast() {
       if (validRows.length > 0) {
         const valuePlaceholders = validRows
           .map((_, idx) => {
-            const base = idx * 7;
-            return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6}, $${base + 7}, NOW())`;
+            const base = idx * 8;
+            return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6}, $${base + 7}, $${base + 8}, NOW())`;
           })
           .join(", ");
 
@@ -282,13 +272,14 @@ export async function syncAllFundsFast() {
           row.name,
           row.nav,
           row.navDate,
-          classify(row.name).category,
+          classifyFund(row.name).category,
+          classifyFund(row.name).subcategory,
           row.planType,
           row.optionType,
         ]);
 
         await pool.query(
-          `INSERT INTO funds (scheme_code, name, nav, nav_date, category, plan_type, option_type, updated_at)
+          `INSERT INTO funds (scheme_code, name, nav, nav_date, category, subcategory, plan_type, option_type, updated_at)
            VALUES ${valuePlaceholders}
            ON CONFLICT (scheme_code) DO UPDATE SET
              name = EXCLUDED.name,
@@ -322,12 +313,13 @@ export async function syncAllFundsFast() {
 
         for (const row of rows) {
           await pool.query(
-            `INSERT INTO funds (scheme_code, name, nav, nav_date, category, plan_type, option_type, updated_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+            `INSERT INTO funds (scheme_code, name, nav, nav_date, category, subcategory, plan_type, option_type, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
              ON CONFLICT (scheme_code) DO UPDATE SET
                name = EXCLUDED.name, nav = EXCLUDED.nav, nav_date = EXCLUDED.nav_date,
                plan_type = EXCLUDED.plan_type, option_type = EXCLUDED.option_type, updated_at = NOW()`,
-            [row.schemeCode, row.name, row.nav, row.navDate, classify(row.name).category, row.planType, row.optionType]
+            [row.schemeCode, row.name, row.nav, row.navDate, classifyFund(row.name).category,
+             classifyFund(row.name).subcategory, row.planType, row.optionType]
           );
         }
 

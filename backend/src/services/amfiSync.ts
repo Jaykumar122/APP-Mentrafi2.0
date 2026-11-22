@@ -1,5 +1,6 @@
 // src/services/amfiSync.ts
 import pool from "../config/db";
+import { classifyFund } from "./fundCategory";
 
 const AMFI_NAV_URL = "https://www.amfiindia.com/spages/NAVAll.txt";
 
@@ -22,46 +23,6 @@ function parseAmfiDate(dateStr: string): string {
     return `${year}-${mon}-${day}`;
   }
   return new Date().toISOString().split("T")[0];
-}
-
-function parseAmfiCategory(headerStr: string | null): { category: string; subcategory: string } {
-  if (!headerStr) return { category: "Equity", subcategory: "Diversified" };
-  const h = headerStr.toLowerCase();
-
-  let category = "Equity";
-  let subcategory = "Diversified";
-
-  if (
-    h.includes("debt") ||
-    h.includes("income") ||
-    h.includes("gilt") ||
-    h.includes("liquid") ||
-    h.includes("money market")
-  ) {
-    category = "Debt";
-    subcategory = "Debt Fund";
-  } else if (h.includes("hybrid") || h.includes("balanced") || h.includes("advantage")) {
-    category = "Hybrid";
-    subcategory = "Balanced";
-  } else if (h.includes("elss") || h.includes("tax")) {
-    category = "ELSS";
-    subcategory = "Tax Saving";
-  } else if (h.includes("gold") || h.includes("silver") || h.includes("precious")) {
-    category = "Commodity";
-    subcategory = "Gold";
-  }
-
-  if (h.includes("large cap") || h.includes("bluechip")) {
-    subcategory = "Large Cap";
-  } else if (h.includes("mid cap")) {
-    subcategory = "Mid Cap";
-  } else if (h.includes("small cap")) {
-    subcategory = "Small Cap";
-  } else if (h.includes("flexi cap") || h.includes("multi cap")) {
-    subcategory = "Flexi Cap";
-  }
-
-  return { category, subcategory };
 }
 
 export interface AmfiScheme {
@@ -151,7 +112,8 @@ export async function syncFromAmfiOfficial(): Promise<{
             ? "IDCW"
             : "Growth";
 
-        const { category, subcategory } = parseAmfiCategory(currentCategory);
+        // Official SEBI category from the AMFI section header (see fundCategory.ts).
+        const { category, subcategory } = classifyFund(name, currentCategory);
 
         schemes.push({
           schemeCode: code,
@@ -203,6 +165,8 @@ export async function syncFromAmfiOfficial(): Promise<{
         SET isin = COALESCE(EXCLUDED.isin, funds.isin),
             nav = EXCLUDED.nav,
             nav_date = EXCLUDED.nav_date,
+            category = EXCLUDED.category,
+            subcategory = EXCLUDED.subcategory,
             is_active = TRUE,
             updated_at = CURRENT_TIMESTAMP;
       `;
