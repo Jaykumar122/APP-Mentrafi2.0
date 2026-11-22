@@ -47,6 +47,10 @@ import {
   C,
   depthShadow,
 } from "../(auth)/login";
+import { computeSip } from "../../utils/sipMath";
+
+// Example on the calculator card, computed by the same engine as the calculator.
+const HOME_SIP_EXAMPLE = `₹${(computeSip({ mode: "Regular", monthlyInvestment: 5000, lumpsumInvestment: 0, targetAmount: 0, expectedReturn: 12, timePeriod: 15, stepUpRate: 0 }).totalValue / 1e5).toFixed(2)}L`;
 
 // ---------------------------------------------------------------------------
 // Types — mirror the shape returned by GET /api/portfolio and GET /api/funds
@@ -1199,7 +1203,7 @@ export default function HomeScreen() {
                     Compound Wealth Calculator
                   </Text>
                   <Text style={{ color: C.textMuted, fontSize: 11, marginTop: 2 }}>
-                    See how ₹5,000/mo SIP compounds to ₹24.98L in 15 years
+                    See how ₹5,000/mo SIP compounds to {HOME_SIP_EXAMPLE} in 15 years at 12%
                   </Text>
                 </View>
                 <ChevronRight size={18} color="#fff" />

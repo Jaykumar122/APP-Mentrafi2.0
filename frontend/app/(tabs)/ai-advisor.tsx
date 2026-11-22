@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter, useFocusEffect } from "expo-router";
+import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import {
   Sparkles,
   Send,
@@ -423,6 +423,12 @@ function FormattedMessageText({ text }: { text: string }) {
 export default function AIAdvisorScreen() {
   const router = useRouter();
   const [inputText, setInputText] = useState("");
+  // A question handed over by another screen (e.g. the SIP calculator) is placed in the
+  // input box, not sent, so the user can review or edit it first.
+  const { prompt } = useLocalSearchParams<{ prompt?: string }>();
+  useEffect(() => {
+    if (typeof prompt === "string" && prompt.trim()) setInputText(prompt.trim());
+  }, [prompt]);
   const [isTyping, setIsTyping] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [userProfile, setUserProfile] = useState<{
