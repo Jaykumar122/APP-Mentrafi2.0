@@ -35,9 +35,106 @@ from inference.financial_calculator import (
     calculate_goal_sip,
     calculate_lumpsum,
     calculate_step_up_sip,
+    extract_amounts,
     format_inr,
+    format_inr_exact,
     parse_currency_amount,
+    DISCLAIMER,
+    TAX_NOTE,
+    _fmt_years,
 )
+from inference.definition_router import (
+    faithful as definition_faithful, is_concept_question, match_topic, messages_for as definition_messages,
+    reference as definition_reference,
+)
+from llm120.checkpoint import load_checkpoint as llm_load_checkpoint
+from llm120.generate import generate_chat as llm_generate_chat
+from llm120.grounding import (
+    TAX_AS_OF, TAX_DEBT, TAX_EQUITY, Allocation, GroundedContext, build_messages,
+    fund_fact_from_row, to_display_text, to_model_text, ungrounded_numbers, unlisted_scheme_mentions,
+)
+from llm120.tokenization import Tokenizer as LLMTokenizer, serialize as llm_serialize
+
+
+GREETING_NAME = re.compile(r"\b(?:Thank you|Thanks|Happy to help|Hello|Hi),\s+([A-Z][a-z]+)")
+# Fields the app DB cannot supply truthfully (formula-filled). Flag only a stated VALUE,
+# not advice such as "compare costs and fund manager tenure in the factsheet".
+_RISK_LEVEL = r"(?:low|low to moderate|moderate|moderately high|high|very high)"
+UNSUPPORTED_CLAIMS = {
+    "expense ratio": re.compile(r"\bexpense ratio(?:\s+(?:of|is|at|was))?\s*:?\s*\d", re.I),
+    "riskometer": re.compile(rf"\b{_RISK_LEVEL}\s+riskometer\b|\briskometer(?:\s+(?:of|is|at))?\s*:?\s*{_RISK_LEVEL}\b", re.I),
+    "aum": re.compile(r"\baum\b[^.]{0,25}?\d", re.I),
+    "fund manager": re.compile(r"\bfund manager(?:\s+is|:)\s+[A-Z]"),
+    "benchmark": re.compile(r"\bbenchmark(?:\s+is|:)\s+[A-Z]"),
+}
+
+
+def reply_problems(text: str, context: str, required: Optional[List[str]] = None) -> List[str]:
+    """Reasons a Network 3 reply must not be shown (empty list = acceptable).
+
+    Catches what the plain number check cannot: a figure that exists in the context
+    but is the wrong one (Rs 800 for Rs 8,000), an invented investor name, terms the
+    context never supplied, and a reply that leaves out the engine figures it must quote.
+    """
+    problems = []
+    low_text, low_context = text.lower(), context.lower()
+    for match in GREETING_NAME.finditer(text):
+        if match.group(1).lower() not in low_context:
+            problems.append(f"invented name {match.group(1)}")
+    if unlisted_scheme_mentions(text, context):
+        problems.append("scheme name not exactly in the verified candidates")
+    for term, claim in UNSUPPORTED_CLAIMS.items():
+        if claim.search(text) and term not in low_context:
+            problems.append(f"unsupported claim about {term!r}")
+    for item in required or []:
+        if item.lower() not in low_text:
+            problems.append(f"missing required figure {item!r}")
+    return problems
+
+
+RISK_WORDS = re.compile(r"\b(conservative|moderate|aggressive|low risk|high risk|medium risk|risk appetite|"
+                        r"risk profile|risk tolerance)\b", re.I)
+RISK_NOT_STATED = re.compile(r"\s*You did not state your risk appetite[^.]*\.", re.I)
+
+
+def polish_reply(text: str, question: str, history: Optional[List[Dict[str, Any]]] = None) -> str:
+    """Small deterministic fixes for known model slips (no facts are added)."""
+    said = " ".join([question] + [t.get("content", "") for t in history or [] if t.get("role") == "user"])
+    if RISK_WORDS.search(said):
+        text = RISK_NOT_STATED.sub("", text)
+    text = re.sub(r"\ba (?=[aeiouAEIOU])", "an ", text)
+    return re.sub(r"\s{2,}", " ", text).strip()
+
+
+def normalize_risk(risk: Optional[str]) -> Optional[str]:
+    """Network 1 labels (CONSERVATIVE/LOW, MODERATE, AGGRESSIVE/HIGH) -> SFT wording."""
+    value = (risk or "").lower()
+    if not value or value == "unknown":
+        return None
+    if "low" in value or "conservative" in value:
+        return "conservative"
+    if "high" in value or "aggressive" in value:
+        return "aggressive"
+    return "moderate"
+
+
+def grounded_profile(*, name=None, age=None, occupation=None, goal=None,
+                     monthly_budget=None, horizon=None) -> Dict[str, str]:
+    """Investor slots in the exact wording used by the grounded SFT data."""
+    profile: Dict[str, str] = {}
+    if name:
+        profile["name"] = str(name)
+    if age:
+        profile["age"] = str(int(age))
+    if occupation:
+        profile["occupation"] = str(occupation)
+    if goal:
+        profile["goal"] = str(goal).replace("_", " ")
+    if monthly_budget:
+        profile["monthly_budget"] = format_inr_exact(float(monthly_budget))
+    if horizon:
+        profile["horizon"] = _fmt_years(float(horizon))
+    return profile
 from inference.generate import (
     is_greeting,
     handle_greeting,
@@ -123,6 +220,7 @@ class MentraFiAIEngine:
         self.model: Optional[MentraFiAI] = None
         self.query_parser: Optional[FinancialQueryParser] = None
         self.db: Optional[FundDatabase] = None
+        self.llm = None  # (llm120 CausalLM, llm120 Tokenizer) when a trained checkpoint exists
         self.checkpoint_name = "finetune_v5"
 
     def load(self):
@@ -133,7 +231,26 @@ class MentraFiAIEngine:
         logger.info(f"Loading SentencePiece Tokenizer: {tok_path}")
         self.tokenizer = Tokenizer(tok_path)
 
-        # 2. Network 3: Generative LLM (102.5M)
+        # 2. Network 3: the trained 120M llm120 model when present, else the legacy 102.5M model.
+        llm_path = Path(os.environ.get("MENTRAFI_LLM120_CHECKPOINT",
+                                       ROOT_DIR / "checkpoints" / "llm120_sft" / "best.pt"))
+        if llm_path.exists():
+            llm_tok = LLMTokenizer(tok_path)
+            llm_model, payload = llm_load_checkpoint(llm_path, llm_tok, device=self.device)
+            if payload.get("metadata", {}).get("stage") != "sft":
+                logger.warning("%s is not an SFT checkpoint; replies may ignore the grounded context", llm_path)
+            del payload
+            if self.device == "cuda":
+                llm_model.half()
+            llm_model.eval()
+            self.llm = (llm_model, llm_tok)
+            self.checkpoint_name = f"llm120:{llm_path.parent.name}/{llm_path.name}"
+            logger.info(f"Network 3 ready: llm120 ({llm_model.num_parameters():,} params) from {llm_path}")
+        else:
+            self._load_legacy_network3()
+        self._load_networks_1_2_and_db(tok_path)
+
+    def _load_legacy_network3(self):
         cfg_path = str(ROOT_DIR / "configs" / "model_config.yaml")
         cfg_dict = load_config(cfg_path)
         cfg = ModelConfig(**{k: v for k, v in cfg_dict.items() if k in ModelConfig.__dataclass_fields__})
@@ -141,9 +258,6 @@ class MentraFiAIEngine:
 
         ckpt_candidates = [
             ROOT_DIR / "checkpoints" / "finetune_v5" / "best_model.pt",
-            ROOT_DIR / "checkpoints" / "finetune_v4" / "best_model.pt",
-            ROOT_DIR / "checkpoints" / "finetune_v3" / "best_model.pt",
-            ROOT_DIR / "checkpoints" / "pretrain_v2" / "best_model.pt",
         ]
         chosen_ckpt = None
         for ck in ckpt_candidates:
@@ -161,6 +275,7 @@ class MentraFiAIEngine:
         self.checkpoint_name = chosen_ckpt.parent.name
         logger.info(f"Network 3 ready ({self.checkpoint_name}, step {ckpt.get('step', 0):,})")
 
+    def _load_networks_1_2_and_db(self, tok_path: str):
         # 3. Network 1 (10M Classifier) & Network 2 (15M Query Parser)
         clf_path = ROOT_DIR / "checkpoints" / "classifier" / "best_classifier.pt"
         parser_path = ROOT_DIR / "checkpoints" / "query_parser" / "best_parser_net.pt"
@@ -200,9 +315,8 @@ class MentraFiAIEngine:
         return re.sub(r"\s+", " ", text).strip()
 
     def sip_compounding(self, monthly_sip: float, annual_cagr: float, years: int) -> float:
-        r = (annual_cagr / 100.0) / 12.0
-        n = years * 12
-        return monthly_sip * (((1.0 + r)**n - 1.0) / r)
+        # Single source of truth for SIP math (start-of-month installments).
+        return calculate_sip(monthly_sip, years, annual_cagr)["corpus"]
 
     def generate_portfolio_plan(
         self,
@@ -213,6 +327,8 @@ class MentraFiAIEngine:
         age: Optional[int] = None,
         occupation: Optional[str] = None,
         goal: Optional[str] = None,
+        question: Optional[str] = None,
+        history: Optional[List[Dict[str, Any]]] = None,
     ):
         risk_lower = (risk or "moderate").lower()
         goal_lower = (goal or "").lower()
@@ -391,7 +507,9 @@ class MentraFiAIEngine:
                     id=str(fund_data["scheme_code"]),
                     schemeCode=fund_data["scheme_code"],
                     name=fund_data["name"],
-                    category=fund_data.get("category") or "Debt",
+                    category=fund_data.get("category") or (
+                        "Debt" if cat_key in ("debt", "conservative_hybrid")
+                        else "Hybrid" if cat_key == "hybrid" else "Equity"),
                     subcategory=fund_data.get("subcategory") or display_cat,
                     rating=float(fund_data.get("rating") or 4.0),
                     oneYearReturn=float(fund_data.get("return_1y") or 0.0),
@@ -403,20 +521,56 @@ class MentraFiAIEngine:
                 ))
 
         # ── 3. Deterministic Compounding Mathematics ──
-        invested = budget * horizon * 12
-        corpus = self.sip_compounding(budget, cagr, horizon)
-        real_corpus = corpus / (1.06 ** horizon)
+        fixed = calculate_sip(budget, horizon, cagr)
+        invested = fixed["invested"]
+        corpus = fixed["corpus"]
+        real_corpus = fixed["real_corpus"]
 
-        # 10% Step-Up SIP projection (compounding at month end)
-        step_up_corpus = 0.0
-        step_cur_sip = budget
-        r_step = (cagr / 100.0) / 12.0
-        total_step_invested = 0.0
-        for y in range(horizon):
-            for m in range(12):
-                total_step_invested += step_cur_sip
-                step_up_corpus = step_up_corpus * (1.0 + r_step) + step_cur_sip
-            step_cur_sip *= 1.10
+        # 10% Step-Up SIP projection (same engine and timing as the fixed SIP)
+        step = calculate_step_up_sip(budget, horizon, cagr, 10.0)
+        step_up_corpus = step["corpus"]
+        total_step_invested = step["invested"]
+
+        # ── 4. Network 3 (llm120): explain the plan from the verified context ──
+        if self.llm is not None and question:
+            ctx = GroundedContext(
+                intent="PORTFOLIO_RECOMMENDATION",
+                risk=normalize_risk(risk),
+                profile=grounded_profile(name=name, age=age, occupation=occupation, goal=goal,
+                                         monthly_budget=budget, horizon=horizon),
+                calculations={
+                    "months": str(fixed["months"]), "total invested": fixed["invested_fmt"],
+                    "projected corpus": fixed["corpus_fmt"], "estimated gain": fixed["gain_fmt"],
+                    "value in today's money": fixed["real_corpus_fmt"],
+                    "with 10% yearly step-up": step["corpus_fmt"],
+                },
+                assumptions=[f"blended return {cagr:g}% a year", "start-of-month installments", "6% inflation"],
+            )
+            funds_in_context: List[Dict[str, Any]] = []
+            for display_cat, _, amt, pct, fund in allocs:
+                index = None
+                if fund:
+                    funds_in_context.append(fund)
+                    index = len(funds_in_context)
+                ctx.allocation.append(Allocation(display_cat, format_inr_exact(amt), f"{pct}%", index))
+            ctx.funds = [fund_fact_from_row(f) for f in funds_in_context]
+            nav_dates = [str(f["nav_date"]) for f in funds_in_context if f.get("nav_date")]
+            ctx.data_as_of = max(nav_dates) if nav_dates else None
+            any_equity = any(cat not in ("debt", "conservative_hybrid") for _, cat, _, _, _ in allocs)
+            ctx.tax_notes = [TAX_EQUITY if any_equity else TAX_DEBT, TAX_AS_OF]
+            if horizon < 3:
+                ctx.notes.append("Horizon under 3 years, so no equity.")
+            anchors = [f.name for f in ctx.funds] or [ctx.profile["monthly_budget"].replace("₹", "Rs ")]
+            narrative = self.grounded_llm_reply(
+                question, ctx, history, must_mention=anchors,
+                required=[format_inr_exact(float(budget)), fixed["corpus_fmt"], fixed["invested_fmt"]])
+            if narrative:
+                summary = [narrative, "", f"### 🎯 Allocation: **{strategy_title}**"]
+                for display_cat, _, amt, pct, fund in allocs:
+                    summary.append(f"• **{display_cat} ({pct}% — ₹{amt:,.0f}/mo):** "
+                                   + (fund["name"] if fund else "no verified scheme found"))
+                summary += ["", DISCLAIMER]
+                return "\n".join(summary), recommended_funds
 
         greeting = f"Hello {name}!" if name else "Welcome to your personalized wealth strategy!"
         profile_pills = []
@@ -458,8 +612,8 @@ class MentraFiAIEngine:
             lines.append("")
 
         lines.extend([
-            f"⚖️ **Current 2026 Indian Taxation Rule:**",
-            f"Long-Term Capital Gains (LTCG) above **₹1.25 Lakh** in a financial year are taxed at **12.5%** without indexation (STCG at 20.0%). All recommendations strictly utilize Direct-Growth plans to eliminate distributor commissions."
+            TAX_NOTE,
+            "All recommendations use Direct-Growth plans, which carry no distributor commission."
         ])
 
         return "\n".join(lines), recommended_funds
@@ -480,7 +634,91 @@ class MentraFiAIEngine:
             planType=f"{fund_data.get('plan_type', 'Direct')} {fund_data.get('option_type', 'Growth')}"
         )
 
+    def grounded_llm_reply(self, question: str, ctx: GroundedContext,
+                           history: Optional[List[Dict[str, Any]]] = None,
+                           max_tokens: int = 400, temperature: float = 0.2,
+                           must_mention: Optional[List[str]] = None,
+                           required: Optional[List[str]] = None) -> Optional[str]:
+        """Network 3 (llm120) answer from verified context; None if unusable.
+
+        Uses llm120.grounding (the SFT training format). The reply is rejected if
+        it contains any number that is not in the context, question, or history,
+        or (when must_mention is given) if it mentions none of those strings.
+        """
+        if self.llm is None:
+            return None
+        model, tok = self.llm
+        context_length = model.config.context_length
+        turns: List[Dict[str, str]] = []
+        for turn in history or []:
+            role, content = turn.get("role"), (turn.get("content") or "").strip()
+            if role not in ("user", "assistant") or not content:
+                continue
+            expected = "user" if not turns or turns[-1]["role"] == "assistant" else "assistant"
+            if role == expected:
+                turns.append({"role": role, "content": content[:1500]})
+        if turns and turns[-1]["role"] == "user":
+            turns.pop()
+        try:
+            while True:
+                messages = build_messages(question, ctx, turns)
+                ids, _ = llm_serialize(messages, tok, add_generation_prompt=True)
+                if len(ids) + 96 <= context_length or not turns:
+                    break
+                turns = turns[2:]  # drop the oldest exchange
+            max_new = min(max_tokens, context_length - len(ids))
+            if max_new < 96:
+                logger.warning("Grounded prompt too long for Network 3 (%d tokens)", len(ids))
+                return None
+            # No repetition penalty: the reply must copy digits and names that
+            # already appear in the context and in its own earlier sentences.
+            text, result = llm_generate_chat(model, tok, messages, max_new_tokens=max_new,
+                                             temperature=temperature, top_k=40, top_p=0.9,
+                                             repetition_penalty=1.0)
+        except ValueError as exc:
+            logger.warning("Network 3 generation skipped: %s", exc)
+            return None
+        text = text.strip()
+        if result.finish_reason == "length" and "." in text:
+            text = text[:text.rfind(".") + 1]  # drop an unfinished last sentence
+        if len(text) < 20:
+            return None
+        leaked = ungrounded_numbers(text, *(m["content"] for m in messages))
+        if leaked:
+            logger.warning("Network 3 reply rejected; numbers not in verified context: %s | reply: %.400s",
+                           sorted(leaked), text)
+            return None
+        text = polish_reply(text, question, history)
+        problems = reply_problems(text, messages[0]["content"], [to_model_text(item) for item in required or []])
+        if problems:
+            logger.warning("Network 3 reply rejected: %s | reply: %.300s", problems, text)
+            return None
+        if must_mention and not any(item.lower() in text.lower() for item in must_mention):
+            logger.warning("Network 3 reply rejected; it ignores the verified context")
+            return None
+        return to_display_text(text)
+
+    def definition_reply(self, topic: str) -> str:
+        """Network 3 answer for a curriculum topic, checked against the reviewed text."""
+        trained_question, reviewed = definition_reference(topic)
+        if self.llm is not None:
+            model, tok = self.llm
+            try:
+                text, result = llm_generate_chat(model, tok, definition_messages(topic), max_new_tokens=320,
+                                                 temperature=0, repetition_penalty=1.0)
+                text = text.strip()
+                if result.finish_reason == "eos" and definition_faithful(text, topic):
+                    return to_display_text(text)
+                logger.info("Network 3 definition for %r drifted; using the reviewed answer", topic)
+            except ValueError as exc:
+                logger.warning("Network 3 definition skipped: %s", exc)
+        return to_display_text(reviewed)
+
     def generate_llm_reply(self, cleaned_query: str, max_tokens: int = 300, temperature: float = 0.3) -> str:
+        if self.model is None and self.llm is not None:
+            reply = self.grounded_llm_reply(cleaned_query, GroundedContext(intent="GENERAL_CHAT"),
+                                            max_tokens=max_tokens, temperature=temperature)
+            return reply or ""
         prefix_ids = [self.tokenizer.bos_id, self.tokenizer.user_id] + self.tokenizer.encode(cleaned_query) + [self.tokenizer.assistant_id]
         idx = torch.tensor([prefix_ids], dtype=torch.long, device=self.device)
         prompt_len = len(prefix_ids)
@@ -535,7 +773,11 @@ class MentraFiAIEngine:
         parsed = self.query_parser.parse(query)
         intent = parsed.intent
         risk = (profile.risk_appetite if profile and profile.risk_appetite else parsed.risk) or "MODERATE"
-        budget = parsed.amount or (profile.monthly_sip_budget if profile else None)
+        # Network 2 can miss phrasings like "for 5000 a month"; the math engine's amount
+        # parser is the fallback (monthly amounts only, so a target corpus is not a budget).
+        monthly_amounts = [a["amount"] for a in extract_amounts(query) if a["monthly"]]
+        budget = (parsed.amount or (monthly_amounts[0] if monthly_amounts else None)
+                  or (profile.monthly_sip_budget if profile else None))
         horizon = parsed.horizon or (profile.investment_horizon if profile else 10)
         age = (profile.age if (profile and profile.age) else parsed.age)
         name = (profile.name if (profile and profile.name) else parsed.name)
@@ -579,7 +821,16 @@ class MentraFiAIEngine:
             return reply, [], "GREETING", risk
 
         # 2. Deterministic Financial Calculator Engine (Zero Math Hallucination)
-        calc_reply = detect_and_calculate(query, default_years=int(horizon or 10), default_cagr=12.0, risk_profile=risk)
+        # Network 1 decides first: a confident portfolio request with a budget goes to the
+        # advisor route (allocation + fund cards + Network 3, which also includes the SIP
+        # projection). The calculator handles it only if the user explicitly asks to calculate.
+        explicit_calc = re.search(r"\b(calculate|calculation|compute|how much will|what will|future value|"
+                                  r"maturity|projection|grow to|become|corpus|how much sip|how much should i invest|"
+                                  r"tax|ltcg|stcg|80c|lump ?sum|one[- ]time)\b", clean_lower)
+        advisor_first = (intent == "PORTFOLIO_RECOMMENDATION" and parsed.intent_confidence >= 0.8
+                         and bool(budget) and not explicit_calc)
+        calc_reply = None if advisor_first else detect_and_calculate(
+            query, default_years=int(horizon or 10), default_cagr=12.0, risk_profile=risk)
         if calc_reply:
             recommended_funds: List[FundCardResponse] = []
             if self.db and self.db.is_connected:
@@ -655,6 +906,13 @@ class MentraFiAIEngine:
         is_info = is_informational(clean) or is_informational(query)
         has_explicit_budget = bool(budget) and intent == "PORTFOLIO_RECOMMENDATION"
 
+        # 4a. Concept questions answered by Network 3 from the reviewed curriculum it
+        # was fine-tuned on (91 topics). The model is asked the trained wording of the
+        # matched topic; a reply that drifts from the reviewed answer is replaced by it.
+        topic = match_topic(query) if is_concept_question(query) else None
+        if topic and not has_explicit_budget and not parsed.amount:
+            return self.definition_reply(topic), [], "DEFINITION", risk
+
         if is_info and not has_explicit_budget:
             info_reply = informational_reply(clean) or informational_reply(query)
             if info_reply:
@@ -671,10 +929,24 @@ class MentraFiAIEngine:
                 age=age,
                 occupation=occupation,
                 goal=goal,
+                question=query,
+                history=history,
             )
             return reply, funds, "PORTFOLIO_RECOMMENDATION", risk
 
         # 6. Fallback: Direct / General Questions via Generative Model
+        if self.llm is not None:
+            ctx = GroundedContext(
+                intent=intent or "GENERAL_CHAT", risk=normalize_risk(risk),
+                profile=grounded_profile(name=name, age=age, occupation=occupation, goal=goal,
+                                         monthly_budget=budget, horizon=parsed.horizon and horizon))
+            reply = self.grounded_llm_reply(query, ctx, history, max_tokens=350, temperature=0.3)
+            if reply:
+                return reply, [], intent, risk
+            return (
+                "I could not answer that reliably from verified data. You can ask me to calculate a SIP, "
+                "plan for a goal, compare schemes, or suggest a portfolio for your budget and horizon.",
+                [], intent, risk)
         reply = self.generate_llm_reply(clean, max_tokens=350, temperature=0.3)
         return reply, [], intent, risk
 

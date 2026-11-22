@@ -88,14 +88,24 @@ def parse_line(line):
     return got, stated
 
 
-def matches(got, stated, tol=0.005):
+def stated_decimals(line):
+    """Decimal places printed in the stated result (last '=' segment)."""
+    m = re.search(r"\d+\.(\d+)", line.split("=")[-1])
+    return len(m.group(1)) if m else 0
+
+
+def matches(got, stated, tol=0.005, decimals=0):
+    # A value printed to d decimals is only exact to +/- half a unit in the last
+    # place (e.g. Sharpe 0.62 stands for 0.615-0.625), which can exceed 0.5%
+    # relative error for small results. Accept that rounding band as well.
     for scale in (1.0, 100.0, 0.01):
         want = stated * scale
         if want == 0:
             if abs(got) < 1e-9:
                 return True
             continue
-        if abs(got - want) / abs(want) <= tol:
+        allowed = max(tol * abs(want), 0.5 * 10 ** -decimals * scale * 1.0001)
+        if abs(got - want) <= allowed:
             return True
     return False
 
@@ -114,7 +124,7 @@ def main():
                 continue
             got, stated = r
             checked += 1
-            if not matches(got, stated):
+            if not matches(got, stated, decimals=stated_decimals(line)):
                 failed += 1
                 if shown < 12:
                     shown += 1

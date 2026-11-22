@@ -1,0 +1,106 @@
+◇ injected env (4) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
+◇ injected env (0) from .env // tip: ⌘ suppress logs { quiet: true }
+✅ PostgreSQL connected
+AMFI feed: 14,481 schemes with official categories.
+37,917 funds (14,320 matched to AMFI); 33,713 labels change.
+   17511  Equity/Diversified -> Debt/Fixed Maturity / Interval
+            e.g. SBI Fixed Maturity Plan (FMP) - Series 53 (1839 Days) - Direct Plan - Growth
+            e.g. Sundaram Fixed Term Plan -AS- Dividend Payout Option
+            e.g. Religare Invesco Fixed Maturity Plan - Series XIX - Plan C (367 Days) - Direct Plan - Dividend Payout
+    1494  Equity/Diversified -> Debt/Debt
+            e.g. ICICI Prudential Multiple Yield Fund - Series 7 - 1825 Days Plan B Direct Plan Dividend Option
+            e.g. Reliance Fixed Horizon Fund - XXV - Series 15 - Dividend Payout Option
+            e.g. Reliance Fixed Horizon Fund XXVI- Series 35- Dividend payout option
+    1373  Debt/Debt Fund -> Debt/Debt
+            e.g. SBI DEBT FUND SERIES - 366 DAYS - 38 - REGULAR PLAN - GROWTH
+            e.g. SBI DEBT FUND SERIES A - 3 REGULAR PLAN - GROWTH
+            e.g. SBI DEBT FUND SERIES - 90 DAYS - 60 - DIVIDEND
+    1170  Equity/Diversified -> Equity/Sectoral / Thematic
+            e.g. HDFC Defence Fund - Direct Plan - Growth Option
+            e.g. HSBC Business Cycles Fund - Regular Plan - IDCW
+            e.g. Nippon India Power & Infra Fund - Regular Plan - Growth Option
+     968  Equity/Diversified -> Equity/Index Fund
+            e.g. ICICI Prudential Nifty 50 Index Fund - Regular Plan - IDCW
+            e.g. ICICI Prudential Nifty 50 Index Fund - Direct Plan - IDCW
+            e.g. Aditya Birla Sun Life BSE India Infrastructure Index Fund - Direct Plan - GROWTH
+     828  Debt/Debt Fund -> Debt/Liquid
+            e.g. HDFC Liquid Fund - Direct Plan - IDCW Daily
+            e.g. 360 ONE Liquid Fund - Regular Plan - IDCW Option
+            e.g. ICICI Prudential Liquid Fund - Bonus
+     546  Equity/Diversified -> Debt/Short Duration
+            e.g. Franklin India Short-term Income Plan- Retail Plan-Segregated Portfolio 1- 8.25% Vodafone Idea Ltd-10JUL20-Weekly Dividend Option
+            e.g. Franklin India Short term Income Plan-Institutional Plan- Segregated Portfolio 1- 8.25% Vodafone Idea Ltd-10JUL20-Growth Option
+            e.g. Birla Sun Life Short Term FMP- Series 4-Dividend
+     449  Hybrid/Balanced -> Hybrid/Hybrid
+            e.g. Kotak Hybrid Fixed Term Plan Series 2 - Direct Plan - Diviedend
+            e.g. Axis Hybrid Fund - Series 15 - Regular Plan - Growth
+            e.g. Axis Hybrid Fund - Series 23 - Regular Plan - Growth
+     436  Debt/Debt Fund -> Debt/Ultra Short Duration
+            e.g. NIPPON INDIA ULTRA SHORT DURATION FUND - SEGREGATED PORTFOLIO 1 - DIRECT Plan - MONTHLY IDCW Option
+            e.g. NIPPON INDIA ULTRA SHORT DURATION FUND - SEGREGATED PORTFOLIO 1 - MONTHLY IDCW Option
+            e.g. Franklin India Ultra Short Bond Fund- Retail Plan-Segregated Portfolio 1- 8.25% Vodafone Idea Ltd-10JUL20-Weekly Dividend Option
+     395  Equity/Diversified -> Equity/ETF
+            e.g. SBI Nifty Bank ETF - Regular Plan - IDCW
+            e.g. Aditya Birla Sun Life Nifty 200 Quality 30 ETF
+            e.g. Nippon India ETF Hang Seng BeES - Direct Plan
+     390  Equity/Diversified -> Hybrid/Arbitrage
+            e.g. Invesco India Arbitrage Fund - Annual Bonus
+            e.g. Edelweiss Arbitrage Fund - Direct Plan - IDCW
+            e.g. DSP Arbitrage fund - Direct Plan - Growth
+     378  Hybrid/Balanced -> Equity/Diversified
+            e.g. DSP BlackRock Dual Advantage Fund - Series 18 - 34M - Direct Plan - Dividend Payout Option (Maturity Date 10-Oct-2016)
+            e.g. UTI Long Term Advantage Fund Series III - Direct Plan - IDCW
+            e.g. DSP BlackRock Dual Advantage Fund - Series 13 - 35M - Direct Plan - Dividend Payout Option (Maturity Date 04-Apr-2016)
+     375  Equity/Diversified -> Debt/Overnight
+            e.g. Shriram Overnight Fund - Direct Plan - Monthly IDCW
+            e.g. Shriram Overnight Fund - Regular Plan - Daily IDCW
+            e.g. Groww Overnight Fund
+     369  Debt/Debt Fund -> Debt/Gilt
+            e.g. UTI - Gilt Fund - Regular Plan - Discontinued PF Plan Growth
+            e.g. UTI - Gilt Fund - Direct Plan - IDCW
+            e.g. Tata Gilt Mid Term Fund -Regular Plan- Quarterly Dividend
+     311  Debt/Debt Fund -> Debt/Corporate Bond
+            e.g. Nippon India Corporate Bond Fund - Regular Plan - Growth Option
+            e.g. HSBC Corporate Bond Fund Direct Half Yearly IDCW
+            e.g. BNP PARIBAS Corporate Bond Fund -Institutional Plan - Quarterly-Dividend Option
+     291  Hybrid/Balanced -> Debt/Debt
+            e.g. Reliance Dual Advantage Fixed Tenure Fund IV - Plan C - Direct Plan - Dividend Payout Option
+            e.g. Reliance Dual Advantage Fixed Tenure Fund- VI- Plan A- Direct Plan- Dividend Payout Option
+            e.g. Reliance Dual Advantage Fixed Tenure Fund VII- Plan C- Growth Option
+     261  Equity/Diversified -> Debt/Money Market
+            e.g. Groww Money Market Fund - Direct Plan - Income Distribution cum capital withdrawal
+            e.g. HSBC Money Market Fund - Direct Plan - Daily IDCW
+            e.g. Bandhan Money  Market Fund - Regular Plan - Periodic IDCW
+     259  Equity/Diversified -> Debt/Ultra Short Duration
+            e.g. Motilal Oswal Ultra Short Term Fund - Regular Plan - Payout/Reinvestment
+            e.g. Canara Robeco Ultra Short Term Fund - Direct Plan - DAILY IDCW (Reinvestment)
+            e.g. ICICI Prudential Ultra Short term Fund - Direct Plan - Monthly IDCW
+     259  Debt/Debt Fund -> Debt/Dynamic Bond
+            e.g. HDFC Dynamic Term Fund - Regular Plan - Growth Option
+            e.g. HDFC Dynamic Term Fund - Regular Plan - Half Yearly IDCW Option
+            e.g. BANDHAN Dynamic Term Fund - Direct Plan - Quarterly IDCW
+     257  Debt/Debt Fund -> Debt/Short Duration
+            e.g. Tata Short Term Fund - Direct Plan - Growth Option
+            e.g. Sundaram Short Duration Fund (Formerly Known as Principal Short Term Debt Fund) Direct Weekly IDCW
+            e.g. UTI Short Term Fund - Direct Plan - Half-Yearly IDCW
+     235  Equity/Diversified -> Hybrid/Multi Asset Allocation
+            e.g. Motilal Oswal Multi Asset Fund - Direct Plan - Growth Option
+            e.g. Baroda BNP Paribas Multi Asset Active Fund of Funds - Direct Plan - IDCW Option
+            e.g. Groww Multi Asset Omni FOF - Regular Plan - Growth
+     233  Equity/Diversified -> Debt/Credit Risk
+            e.g. Axis Credit Risk Fund - Direct Plan - Growth Option
+            e.g. Axis Credit Risk Fund - Regular Plan - Weekly IDCW Option
+            e.g. Franklin India Credit Risk Fund- Segregated Portfolio 2- 10.90% Vodafone Idea Ltd 02Sep2023-Growth Plan
+     231  Equity/Diversified -> Equity/Value
+            e.g. Axis Value Fund - Direct Plan - Growth Option
+            e.g. ICICI Prudential Value Fund - Series 10 - Dividend Option
+            e.g. Groww Value Fund - Regular Plan - Monthly - Income Distribution cum capital withdrawal
+     229  Equity/Diversified -> Hybrid/Equity Savings
+            e.g. NIPPON INDIA EQUITY SAVINGS FUND - SEGREGATED PORTFOLIO 1 - Direct Plan - MONTHLY IDCW Option
+            e.g. Mahindra Manulife Equity Savings Fund - Regular Plan - Growth
+            e.g. Union Equity Savings Fund - Regular Plan - IDCW Option
+     229  Equity/Diversified -> Equity/International
+            e.g. PGIM India Global Select Real Estate Securities Fund of Fund - Direct Plan - IDCW Option
+            e.g. Franklin India International Fund
+            e.g. Kotak International REIT Overseas Equity Active FOF - Direct Plan - Growth
+Dry run: nothing written.

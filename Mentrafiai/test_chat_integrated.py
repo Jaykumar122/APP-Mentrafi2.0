@@ -133,9 +133,7 @@ def main():
     cfg = ModelConfig(**{k: v for k, v in cfg_dict.items() if k in ModelConfig.__dataclass_fields__})
     model = MentraFiAI(cfg).to(device)
 
-    ckpt_path = Path("checkpoints/finetune_v3/best_model.pt")
-    if not ckpt_path.exists():
-        ckpt_path = Path("checkpoints/finetune_v2/best_model.pt")
+    ckpt_path = Path("checkpoints/finetune_v5/best_model.pt")
 
     ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
     model.load_state_dict(ckpt["model_state_dict"])

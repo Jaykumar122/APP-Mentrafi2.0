@@ -1,0 +1,58 @@
+# llm120 pretraining on Kaggle "GPU T4 x2" (2 x 16 GB T4), DDP via torchrun.
+# Launch with:  python kaggle_train.py --stage pretrain
+# (or torchrun --standalone --nproc_per_node=2 -m llm120.train --config this.yaml ...)
+#
+# Same model and token budget as configs/llm120_pretrain.yaml, tuned for T4s:
+#   8 sequences x 1024 tokens x 8 microbatches = 65,536 tokens per update.
+#   With 2 GPUs each GPU runs 4 microbatches per update (accumulation is split),
+#   so a checkpoint can resume on 1 or 2 GPUs with identical batches.
+# Gradient checkpointing is OFF: measured ~0.6 GB activations per sequence in
+# FP16, so batch 8 needs roughly 7-8 GB of the 15 GB T4 and runs ~25% faster.
+# If you see CUDA out-of-memory, use batch_size 4 + gradient_accumulation_steps 16
+# (same tokens per update) in a NEW output dir, or turn checkpointing on.
+model:
+  vocab_size: 16000
+  context_length: 1024
+  num_layers: 16
+  d_model: 768
+  num_heads: 12
+  num_kv_heads: 4
+  d_ff: 2240
+  dropout: 0.0
+  rope_theta: 10000.0
+  norm_eps: 0.000001
+  init_std: 0.02
+  pad_token_id: 0
+  bos_token_id: 1
+  eos_token_id: 2
+  unk_token_id: 3
+  user_token_id: 4
+  assistant_token_id: 5
+training:
+  stage: pretrain
+  # Overridden by kaggle_train.py with /kaggle/input and /kaggle/working paths.
+  data_dir: data/llm120_pretrain
+  tokenizer: tokenizer/tokenizer_v2.model
+  output_dir: checkpoints/llm120_pretrain
+  batch_size: 8
+  gradient_accumulation_steps: 8
+  # Data: data_prep/build_mf_pretrain.py, an Indian-mutual-fund-focused mix
+  # (MF text repeated by quality + FineWeb-Edu English); see its manifest "mix".
+  # 18,000 x 65,536 = ~1.18B sampled tokens (about one pass of train.bin).
+  # This spans 2+ Kaggle sessions; kaggle_train.py stops before the 12 h limit
+  # and the next session resumes. --max-steps lowers it if your weekly GPU
+  # quota is short (e.g. 12000 = ~0.79B tokens); that also replans LR decay.
+  max_steps: 18000
+  warmup_steps: 500
+  learning_rate: 0.0003
+  min_lr: 0.00003
+  weight_decay: 0.1
+  grad_clip: 1.0
+  # auto = FP16 AMP + GradScaler on T4 (T4 has no native bf16).
+  precision: auto
+  gradient_checkpointing: false
+  eval_interval: 500
+  eval_batches: 16
+  save_interval: 250
+  seed: 42
+  max_overflow_retries: 8

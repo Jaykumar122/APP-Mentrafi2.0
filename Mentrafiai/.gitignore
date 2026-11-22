@@ -31,3 +31,5 @@ scratch/
 # Benchmark output dumps
 test_*results.json
 MentraFiAI_*Report.json
+# Kaggle upload staging (hard links to data)
+kaggle_upload/

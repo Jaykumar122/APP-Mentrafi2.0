@@ -1,0 +1,47 @@
+# llm120 SFT on Kaggle "GPU T4 x2", DDP via torchrun, initialized from the
+# pretraining best.pt.  Launch with:  python kaggle_train.py --stage sft
+#
+# Data: data/llm120_sft (2,416 train / 288 val conversations): the educational
+# curriculum plus 2,400 grounded Network 3 examples (verified context ->
+# faithful explanation, see data_prep/build_grounded_sft.py).
+# 4 conversations x 8 microbatches = 32 conversations per update; with 2 GPUs
+# each runs 4 microbatches. 230 updates ~= 3 passes over the training set
+# (sampled with replacement). Takes minutes, not hours, on 2 x T4.
+model:
+  vocab_size: 16000
+  context_length: 1024
+  num_layers: 16
+  d_model: 768
+  num_heads: 12
+  num_kv_heads: 4
+  d_ff: 2240
+  dropout: 0.0
+  rope_theta: 10000.0
+  norm_eps: 0.000001
+  init_std: 0.02
+  pad_token_id: 0
+  bos_token_id: 1
+  eos_token_id: 2
+  unk_token_id: 3
+  user_token_id: 4
+  assistant_token_id: 5
+training:
+  stage: sft
+  data_dir: data/llm120_sft
+  tokenizer: tokenizer/tokenizer_v2.model
+  output_dir: checkpoints/llm120_sft
+  batch_size: 4
+  gradient_accumulation_steps: 8
+  max_steps: 230
+  warmup_steps: 20
+  learning_rate: 0.00005
+  min_lr: 0.000005
+  weight_decay: 0.1
+  grad_clip: 1.0
+  precision: auto
+  gradient_checkpointing: false
+  eval_interval: 20
+  eval_batches: 72  # 72 x 4 = 288 = the full validation set
+  save_interval: 20
+  seed: 42
+  max_overflow_retries: 8

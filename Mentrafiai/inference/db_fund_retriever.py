@@ -264,6 +264,10 @@ class FundDatabase:
                 cur.execute(query)
                 rows = cur.fetchall()
             conn.commit()
+            # Some rows tagged option_type='Growth' are really payout plans
+            # ("Monthly Payout of IDCW", "Weekly Dividend"); never recommend those.
+            payout = ("idcw", "dividend", "payout", "distribution", "bonus", "reinvest")
+            rows = [r for r in rows if not any(w in str(r[1]).lower() for w in payout)]
             if not rows:
                 return None
             row = random.choice(rows)

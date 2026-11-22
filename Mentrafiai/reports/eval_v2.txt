@@ -1,0 +1,57 @@
+checkpoint: checkpoints\llm120_sft_v2\best.pt (stage=sft, 120,054,528 parameters)
+grounded validation conversations: 150
+  25/150
+  50/150
+  75/150
+  100/150
+  125/150
+  150/150
+
+=== OVERALL ===
+{"n": 150, "usable": 0.973, "numbers_grounded": 0.993, "key_figures": 0.96, "fund_names_valid": 0.987, "behaviour_ok": 1.0, "allocation_ok": 1.0, "no_invented_content": 1.0, "finished": 0.993}
+
+=== BY INTENT (usable / key_figures) ===
+FUND_COMPARISON              n= 19 usable=0.84 key_figures=0.98
+GENERAL_CHAT                 n=  4 usable=1.00 key_figures=1.00
+GOAL_PLANNING                n= 13 usable=1.00 key_figures=0.98
+PORTFOLIO_RECOMMENDATION     n= 77 usable=0.99 key_figures=0.93
+SIP_CALCULATION              n= 23 usable=1.00 key_figures=1.00
+TAX_CALCULATION              n= 14 usable=1.00 key_figures=1.00
+
+=== 4 FAILED SAMPLES ===
+[FUND_COMPARISON] Q: Which is better: Parag Parikh ELSS Tax Saver Fund - Direct Plan - Growth or Mahindra Manulife ELSS Tax Saver Fund - Direct Plan - Growth or NJ ELSS Tax Saver Fund - Direct Plan - Growth Option?
+  REPLY: Here is a side-by-side view using the data as of 07-May-2025. Parag Parikh ELSS Tax Saver Fund - Direct Plan - Growth shows NAV Rs 31.17, 1-year return -5.4%, 3-year return 11.5%, 5-year return 13.1%. Mahindra Manulife ELSS Tax Saver Fund - Direct Plan - Growth shows NAV Rs 31.65, 1-year return 2.0%, 3-year return 10.9%, 5-year return 11.5%. NJ ELSS Tax Saver Fund - Direct Plan - Growth Option shows NAV Rs 14.66, 1-year return 1.3%, 3-year return 12.0%. Parag Parikh ELSS Tax Saver Fund - Direct 
+  REF:   Here is a side-by-side view using the data as of 07-May-2025. Parag Parikh ELSS Tax Saver Fund - Direct Plan - Growth shows NAV Rs 31.17, 1-year return -5.4%, 3-year return 11.5%, 5-year return 13.1%. Mahindra Manulife ELSS Tax Saver Fund - Direct Plan - Growth shows NAV Rs 31.65, 1-year return 2.0%
+
+[PORTFOLIO_RECOMMENDATION] Q: Age 53. Monthly budget Rs 40,000, horizon 12 years. This is for an emergency fund. My risk appetite is moderate. Suggest the best mutual funds for me.
+  REPLY: For a moderate investor putting Rs 40,000 a month for 12 years, here is a plan based on the verified data. For Flexi Cap Fund, Rs 18,000 a month (45%) can go to ICICI Prudential Flexi Cap fund - Direct Plan - Growth, which shows 3-year return 19.2%, 5-year return 16.8%. For Large Cap Fund, Rs 14,000 a month (35%) can go to BARODA BNP PARIBAS LARGE CAP FUND - Direct Plan - Growth Option, which shows NAV Rs 251.81, 3-year return 13.8%, 1-year return 5.5%. For Mid Cap Fund, Rs 8,000 a month (20%) c
+  REF:   Here is a moderate plan for Rs 40,000 a month over 12 years, using only the verified figures. Put Rs 18,000 (45%) in ICICI Prudential Flexi Cap fund - Direct Plan - Growth, with 3-year return 19.2%. 35%, or Rs 14,000 a month, goes to BARODA BNP PARIBAS LARGE CAP FUND - Direct Plan - Growth Option (3
+
+[FUND_COMPARISON] Q: Tell me about Satpura Nifty 50 Index Fund.
+  REPLY: I do not have verified data for Satpura Nifty 50 Index Fund, so I cannot quote its NAV, returns or costs. The schemes I do have verified figures for are Aditya Birla Sun Life Conservative Hybrid Fund - Direct Plan - GROWTH, as of 15-May-2026. I can explain those, or you can check the latest factsheet of the scheme you asked about on its AMC or AMFI website. I will not guess figures, because an invented number could mislead your decision.
+  REF:   I do not have verified data for Satpura Nifty 50 Index Fund, so I cannot quote its NAV, returns or costs. The schemes I do have verified figures for are Aditya Birla Sun Life Conservative Hybrid Active FOF - Direct Plan - GROWTH and Parag Parikh Conservative Hybrid Fund - Direct Plan - Growth, as of
+
+[FUND_COMPARISON] Q: Compare UTI ELSS Tax Saver Fund - Direct Plan - Growth and 360 ONE ELSS Tax Saver Nifty 50 Index Fund - Direct Plan - GROWTH Option.
+  REPLY: Here is a side-by-side view using the data as of 16-Sep-2026. UTI ELSS Tax Saver Fund - Direct Plan - Growth shows NAV Rs 220.20, 1-year return 2.8%, 3-year return 11.0%, 5-year return 9.3%. 360 ONE ELSS Tax Saver Fund - Direct Plan - Growth shows NAV Rs 13.17, 1-year return -0.2%, 3-year return 8.7%. UTI ELSS Tax Saver Fund - Direct Plan - Growth has the highest 3-year return at 11.0%, but past returns do not guarantee future performance. All of them are in the ELSS Tax Saver Fund category, so 
+  REF:   Here is a side-by-side view using the data as of 16-Sep-2026. UTI ELSS Tax Saver Fund - Direct Plan - Growth shows NAV Rs 220.20, 1-year return 2.8%, 3-year return 11.0%, 5-year return 9.3%. 360 ONE ELSS Tax Saver Nifty 50 Index Fund - Direct Plan - GROWTH Option shows NAV Rs 13.17, 1-year return -0
+
+=== 6 RANDOM SAMPLES ===
+[FUND_COMPARISON] Q: Which is better: Parag Parikh ELSS Tax Saver Fund - Direct Plan - Growth or Mahindra Manulife ELSS Tax Saver Fund - Direct Plan - Growth or NJ ELSS Tax Saver Fund - Direct Plan - Growth Option?
+  REPLY: Here is a side-by-side view using the data as of 07-May-2025. Parag Parikh ELSS Tax Saver Fund - Direct Plan - Growth shows NAV Rs 31.17, 1-year return -5.4%, 3-year return 11.5%, 5-year return 13.1%. Mahindra Manulife ELSS Tax Saver Fund - Direct Plan - Growth shows NAV Rs 31.65, 1-year return 2.0%, 3-year return 10.9%, 5-year return 11.5%. NJ ELSS Tax Saver Fund - Direct Plan - Growth Option shows NAV Rs 14.66, 1-year return 1.3%, 3-year return 12.0%. Parag Parikh ELSS Tax Saver Fund - Direct 
+
+[TAX_CALCULATION] Q: I sold my equity fund units after 13 months with a profit of Rs 7,50,000. How much tax will I pay?
+  REPLY: Your gain of Rs 7,50,000 after 13 months is treated as long-term (Section 112A). The yearly exemption covers Rs 1,25,000 of it, leaving Rs 6,25,000 taxable at 12.5%. That is Rs 78,125 plus Rs 3,125 cess, so the total tax is about Rs 81,250 and you keep Rs 6,68,750. This assumes no other equity gains this year and excludes surcharge, so please confirm with a tax professional.
+
+[SIP_CALCULATION] Q: How much corpus for Rs 1,500/month SIP over 3 years at 10% return?
+  REPLY: Over 3 years you make 36 monthly payments of Rs 1,500, which adds up to Rs 54,000. At an assumed 10% a year the projected corpus is Rs 63,195, an estimated gain of Rs 9,195. Adjusted for 6% inflation, that corpus is worth about Rs 53,060 in today's money. The calculation assumes installments at the start of each month and a constant return, which real funds do not deliver.
+
+[FUND_COMPARISON] Q: Which is better: Mirae Asset Large Cap Fund - Direct Plan - Growth or DSP Large Cap Fund - Direct Plan - Growth?
+  REPLY: Here is a side-by-side view using the data as of 14-Mar-2025. Mirae Asset Large Cap Fund - Direct Plan - Growth shows NAV Rs 123.39, 1-year return 3.2%, 3-year return 10.7%, 5-year return 9.9%. DSP Large Cap Fund - Direct Plan - Growth shows NAV Rs 486.89, 1-year return 0.2%, 3-year return 12.6%, 5-year return 10.9%. DSP Large Cap Fund - Direct Plan - Growth has the highest 3-year return at 12.6%, but past returns do not guarantee future performance. All of them are in the Large Cap Fund categor
+
+[PORTFOLIO_RECOMMENDATION] Q: I'm 24. I want to start a SIP of Rs 4,000 per month for 4 years. I am a conservative investor. Which funds should I choose?
+  REPLY: Happy to help, Sneha. For a conservative investor putting Rs 4,000 a month for 4 years, here is a plan based on the verified data. For Short Duration Fund, Rs 2,000 a month (50%) can go to SBI SHORT TERM FUND - Direct Plan - Growth, which shows NAV Rs 36.43, 3-year return 7.6%, 5-year return 6.5%. The Conservative Hybrid Fund share of Rs 1,400 (35%) has no verified scheme in the data, so I cannot name one; I can search again if you like. Put Rs 600 (15%) in UTI CRISIL SDL Maturity April 2033 Ind
+
+[PORTFOLIO_RECOMMENDATION] Q: Hi, I am Imran. Planning to put Rs 4,000 monthly for the next 2 years. Goal: my daughter's wedding. My risk appetite is conservative. How should I split this money?
+  REPLY: Thank you, Imran. For a conservative investor putting Rs 4,000 a month for 2 years, here is a plan based on the verified data. For Liquid Fund, Rs 2,400 a month (60%) can go to Invesco India Liquid Fund - Direct Plan - Growth, which shows NAV Rs 1,851.69, 3-year return 7.0%, 5-year return 6.3%. Put Rs 1,600 (40%) in Bandhan Short Term Fund - Direct Plan - Growth, with 3-year return 8.0%, 1-year return 6.7%, 5-year return 6.6%. At an assumed 6.7% a year, investing Rs 96,000 over 24 months project
+
+report: eval_v2.json

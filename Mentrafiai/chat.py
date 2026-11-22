@@ -25,6 +25,7 @@ from training.utils import load_config
 from inference.generate import generate_chat_reply, is_greeting, handle_greeting, is_informational, informational_reply, GREETING_REPLY
 from inference.query_parser import FinancialQueryParser, FinancialQuery
 from inference.db_fund_retriever import FundDatabase, format_star_rating
+from inference.financial_calculator import calculate_sip, calculate_goal_sip, extract_amounts
 from typing import Optional
 
 # ── Fix #13: Structured session logging ───────────────────────────────────────
@@ -313,9 +314,8 @@ def validate_llm_response(text: str, query_context: str = "") -> tuple[bool, str
 
 
 def sip_future_value(monthly_sip: float, annual_cagr: float, years: int) -> float:
-    r = (annual_cagr / 100.0) / 12.0
-    n = years * 12
-    return monthly_sip * (((1.0 + r)**n - 1.0) / r)
+    # Single source of truth for SIP math (start-of-month installments).
+    return calculate_sip(monthly_sip, years, annual_cagr)["corpus"]
 
 
 def generate_grounded_portfolio(
@@ -495,7 +495,7 @@ def generate_grounded_portfolio(
     sections.append(
         f"### 5. Strategic Execution Blueprint\n"
         f"1. **Always Choose Direct Plans:** Avoid Regular Plans to save 0.5% to 1.0% annually in commissions. Over {horizon} years on a ₹{budget:,.0f}/month SIP, Direct Plans will save you lakhs in distributor fees!\n"
-        f"2. **Implement 10% Annual Step-Up:** As your career and earnings grow, increase your monthly SIP by 10% every year. This single step can nearly double your final accumulated wealth.\n"
+        f"2. **Implement 10% Annual Step-Up:** As your career and earnings grow, increase your monthly SIP by 10% every year. Over long horizons this can substantially raise the final corpus (illustration, not a guarantee).\n"
         f"3. **Tax Optimization (Equity LTCG):** Long-Term Capital Gains above ₹1.25 lakh/year are taxed at 12.5% upon redemption after 1 year. Tax is payable only when you sell units, allowing untouched compounding.\n"
         f"4. **Annual Rebalancing:** Review your portfolio once every 12 months. If high-flying small/mid caps grow to exceed their target weight, rebalance back to your target allocations.\n"
         f"5. **Execution Platforms:** Set up auto-debit SIPs via Direct platforms like MFCentral, Zerodha Coin, or Groww.\n\n"
@@ -558,16 +558,8 @@ def main():
     cfg = ModelConfig(**{k: v for k, v in cfg_dict.items() if k in ModelConfig.__dataclass_fields__})
     model = MentraFiAI(cfg).to(device)
     
-    # 3. Load Checkpoint (prefer fine-tuned model: v5 -> v4 -> v3 -> v2 -> pretrain)
+    # 3. Load Checkpoint (finetune_v5 is the only legacy 102M checkpoint kept)
     ckpt_path = Path("checkpoints/finetune_v5/best_model.pt")
-    if not ckpt_path.exists():
-        ckpt_path = Path("checkpoints/finetune_v4/best_model.pt")
-    if not ckpt_path.exists():
-        ckpt_path = Path("checkpoints/finetune_v3/best_model.pt")
-    if not ckpt_path.exists():
-        ckpt_path = Path("checkpoints/finetune_v2/best_model.pt")
-    if not ckpt_path.exists():
-        ckpt_path = Path("checkpoints/pretrain_v2/best_model.pt")
     if not ckpt_path.exists():
         print(f"[ERROR] Checkpoint not found at: {ckpt_path}")
         return
@@ -833,20 +825,15 @@ def main():
             if intent == "GOAL_PLANNING":
                 params = extract_portfolio_params(clean_input, risk)
                 # Look for a large corpus target like "1 crore" or "5000000"
-                m_target = re.search(r"Rs\s*([\d,]+)", clean_input)
-                target_amount = None
-                if m_target:
-                    val = float(m_target.group(1).replace(",", ""))
-                    if val >= 100000: # Ensure it's a corpus target, not a monthly SIP
-                        target_amount = val
+                # A corpus target (>= 1 lakh, not a monthly amount), e.g. "1 crore", "Rs 50,00,000"
+                targets = [a["amount"] for a in extract_amounts(clean_input)
+                           if not a["monthly"] and a["amount"] >= 100000]
+                target_amount = max(targets) if targets else None
 
                 if target_amount:
                     horizon = params["horizon"]
-                    # Assume 12% CAGR for goal planning
-                    r = 12.0 / 100.0 / 12.0
-                    n = horizon * 12
-                    # PMT = FV / ( ((1+r)^n - 1) / r ) * (1+r)
-                    required_sip = target_amount / ((((1.0 + r)**n - 1.0) / r) * (1.0 + r))
+                    # Assume 12% CAGR for goal planning (start-of-month installments)
+                    required_sip = calculate_goal_sip(target_amount, horizon, 12.0)["required_sip"]
                     
                     if db and db.is_connected:
                         print(f"[PostgreSQL Database] Goal Planning: Target {fmt_inr(target_amount)} in {horizon} yrs -> Required SIP ~Rs {required_sip:,.0f}/mo")

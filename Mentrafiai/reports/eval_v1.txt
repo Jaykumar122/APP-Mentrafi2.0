@@ -1,0 +1,65 @@
+checkpoint: checkpoints\llm120_sft\best.pt (stage=sft, 120,054,528 parameters)
+grounded validation conversations: 150
+  25/150
+  50/150
+  75/150
+  100/150
+  125/150
+  150/150
+
+=== OVERALL ===
+{"n": 150, "usable": 0.44, "numbers_grounded": 0.78, "key_figures": 0.881, "fund_names_valid": 0.653, "behaviour_ok": 0.947, "allocation_ok": 0.953, "no_invented_content": 0.493, "finished": 0.973}
+
+=== BY INTENT (usable / key_figures) ===
+FUND_COMPARISON              n= 19 usable=0.16 key_figures=0.82
+GENERAL_CHAT                 n=  4 usable=0.50 key_figures=1.00
+GOAL_PLANNING                n= 13 usable=1.00 key_figures=0.99
+PORTFOLIO_RECOMMENDATION     n= 77 usable=0.16 key_figures=0.82
+SIP_CALCULATION              n= 23 usable=0.96 key_figures=1.00
+TAX_CALCULATION              n= 14 usable=1.00 key_figures=1.00
+
+=== 6 FAILED SAMPLES ===
+[FUND_COMPARISON] Q: Which is better: Parag Parikh ELSS Tax Saver Fund - Direct Plan - Growth or Mahindra Manulife ELSS Tax Saver Fund - Direct Plan - Growth or NJ ELSS Tax Saver Fund - Direct Plan - Growth Option?
+  REPLY: Here is a side-by-side view using the data as of 07-May-2025. Parag Parikh ELSS Tax Saver Fund - Direct Plan - Growth shows NAV Rs 31.17, 1-year return -5.4%, 3-year return 11.5%, 5-year return 13.1%, 5-year return 13.1%, 5-year return 13.1%, 5-year return 11.5%, expense ratio 5.1%. NJ ELSS Tax Saver Fund - Direct Plan - Growth shows NAV Rs 14.66, 1-year return 1.3%, 3-year return 12.0%, 5-year return 11.5%, expense ratio 1.20%. NJ ELSS Tax Saver Fund - Direct Plan - Growth has the lowest expens
+  REF:   Here is a side-by-side view using the data as of 07-May-2025. Parag Parikh ELSS Tax Saver Fund - Direct Plan - Growth shows NAV Rs 31.17, 1-year return -5.4%, 3-year return 11.5%, 5-year return 13.1%. Mahindra Manulife ELSS Tax Saver Fund - Direct Plan - Growth shows NAV Rs 31.65, 1-year return 2.0%
+
+[SIP_CALCULATION] Q: Calculate SIP of Rs 12,000 for 7 years. Also show a 10% annual step-up.
+  REPLY: A SIP of Rs 12,000 a month for 7 years means 84 installments, so you invest Rs 10.08 Lakh in total. At an assumed 12% a year, the default since you did not give a rate, the projected corpus is Rs 15.84 Lakh, an estimated gain of Rs 5.74 Lakh. Adjusted for 6% inflation, that corpus is worth about Rs 10.53 Lakh in today's money. With a 10% step-up every year you would invest Rs 13.66 Lakh and the projection rises to Rs 20.51 Lakh. The calculation assumes installments at the start of each month and
+  REF:   A SIP of Rs 12,000 a month for 7 years means 84 installments, so you invest Rs 10.08 Lakh in total. At an assumed 12% a year, the default since you did not give a rate, the projected corpus is Rs 15.84 Lakh, an estimated gain of Rs 5.76 Lakh. Adjusted for 6% inflation, that corpus is worth about Rs 
+
+[FUND_COMPARISON] Q: Compare Taurus Flexi Cap Fund - Direct Plan - Growth and BANDHAN Flexi Cap Fund - Direct Plan - Growth and Mirae Asset Flexi Cap Fund - Direct Plan - Growth.
+  REPLY: Here is a side-by-side view using the data as of 20-Aug-2026. Taurus Flexi Cap Fund - Direct Plan - Growth shows NAV Rs 253.44, 1-year return 7.5%, 3-year return 12.7%, 5-year return 10.8%, 5-year return 10.8%, 5-year return 10.8%, expense ratio 5.8%. BANDHAN Flexi Cap Fund - Direct Plan - Growth shows NAV Rs 225.12, 1-year return 3.9%, 3-year return 13.9%, 5-year return 11.6%, expense ratio 5.8%. Taurus Flexi Cap Fund - Direct Plan - Growth shows NAV Rs 16.83, 1-year return 6.7%, 3-year return 
+  REF:   Here is a side-by-side view using the data as of 20-Aug-2026. Taurus Flexi Cap Fund - Direct Plan - Growth shows NAV Rs 253.44, 1-year return 7.5%, 3-year return 12.7%, 5-year return 10.8%. BANDHAN Flexi Cap Fund - Direct Plan - Growth shows NAV Rs 225.12, 1-year return 3.9%, 3-year return 13.4%, 5-
+
+[PORTFOLIO_RECOMMENDATION] Q: Age 53. Monthly budget Rs 40,000, horizon 12 years. This is for an emergency fund. My risk appetite is moderate. Suggest the best mutual funds for me.
+  REPLY: Here is a moderate plan for Rs 40,000 a month over 12 years, using only the verified figures. Put Rs 18,000 (45%) in ICICI Prudential Flexi Cap Fund - Direct Plan - Growth, with 3-year return 19.2%, expense ratio 35%, 5-year return 16.8%. 35%, or Rs 14,000 a month, goes to BARODA BNP PARIBAS LARGE CAP FUND - Direct Plan - Growth (3-year return 13.8%, expense ratio 20.9%, 5-year return 21.3%). Over 144 months you would invest Rs 57.60 Lakh; at the assumed 11.8% a year this could grow to Rs 1.27 C
+  REF:   Here is a moderate plan for Rs 40,000 a month over 12 years, using only the verified figures. Put Rs 18,000 (45%) in ICICI Prudential Flexi Cap fund - Direct Plan - Growth, with 3-year return 19.2%. 35%, or Rs 14,000 a month, goes to BARODA BNP PARIBAS LARGE CAP FUND - Direct Plan - Growth Option (3
+
+[PORTFOLIO_RECOMMENDATION] Q: I want to put my Rs 1,000 monthly SIP in HSBC Large Cap Fund - Direct Plan - Growth for 3 years. Good idea? I am a conservative investor.
+  REPLY: HSBC Large Cap Fund - Direct Plan - Growth shows a 3-year return of 12.1%, but I would be cautious here. It is a Large Cap Fund with a Very High riskometer, which is above what a conservative risk profile usually accepts. If you still want some equity, a smaller share in a large cap or hybrid fund, with the rest in debt, would match your profile better. Past returns, however strong, do not reduce future volatility. If your risk appetite has changed, tell me and I will rebuild the plan with the v
+  REF:   HSBC Large Cap Fund - Direct Plan - Growth shows a 3-year return of 12.1%, but I would be cautious here. It is a Large Cap Fund, an equity category that can swing sharply, which is above what a conservative risk profile usually accepts. If you still want some equity, a smaller share in a large cap o
+
+[PORTFOLIO_RECOMMENDATION] Q: Planning to put Rs 6,000 monthly for the next 2 years. This is for buying a house. My risk appetite is conservative. How should I split this money?
+  REPLY: Thank you, Ananya. Based on your Rs 6,000 monthly budget, 2 years horizon and conservative risk profile, this is how the engine splits your SIP. 60%, or Rs 3,600 a month, goes to HDFC Liquid Fund - Direct Plan - Growth (3-year return 6.9%, expense ratio 6.9%). 40%, or Rs 2,400 a month, goes to JM Short Duration Fund - Direct Plan - Growth (3-year return 7.3%, expense ratio 7.3%, a Low riskometer). At an assumed 6.7% a year, investing Rs 1.44 Lakh over 24 months projects to about Rs 1.54 Lakh, an
+  REF:   Happy to help, Ananya. Here is a conservative plan for Rs 6,000 a month over 2 years, using only the verified figures. Put Rs 3,600 (60%) in HDFC Liquid Fund - Direct Plan - Growth Option, with NAV Rs 5,588.66, 3-year return 6.9%, 5-year return 6.3%. 40%, or Rs 2,400 a month, goes to JM Short Term F
+
+=== 6 RANDOM SAMPLES ===
+[FUND_COMPARISON] Q: Which is better: Parag Parikh ELSS Tax Saver Fund - Direct Plan - Growth or Mahindra Manulife ELSS Tax Saver Fund - Direct Plan - Growth or NJ ELSS Tax Saver Fund - Direct Plan - Growth Option?
+  REPLY: Here is a side-by-side view using the data as of 07-May-2025. Parag Parikh ELSS Tax Saver Fund - Direct Plan - Growth shows NAV Rs 31.17, 1-year return -5.4%, 3-year return 11.5%, 5-year return 13.1%, 5-year return 13.1%, 5-year return 13.1%, 5-year return 11.5%, expense ratio 5.1%. NJ ELSS Tax Saver Fund - Direct Plan - Growth shows NAV Rs 14.66, 1-year return 1.3%, 3-year return 12.0%, 5-year return 11.5%, expense ratio 1.20%. NJ ELSS Tax Saver Fund - Direct Plan - Growth has the lowest expens
+
+[TAX_CALCULATION] Q: I sold my equity fund units after 13 months with a profit of Rs 7,50,000. How much tax will I pay?
+  REPLY: Your gain of Rs 7,50,000 after 13 months is treated as long-term (Section 112A). The yearly exemption covers Rs 1,25,000 of it, leaving Rs 6,25,000 taxable at 12.5%. That is Rs 78,125 plus Rs 3,125 cess, so the total tax is about Rs 81,250 and you keep Rs 6,68,750. This assumes no other equity gains this year and excludes surcharge, so please confirm with a tax professional.
+
+[SIP_CALCULATION] Q: How much corpus for Rs 1,500/month SIP over 3 years at 10% return?
+  REPLY: Over 3 years you make 36 monthly payments of Rs 1,500, which adds up to Rs 54,000. At an assumed 10% a year the projected corpus is Rs 63,195, an estimated gain of Rs 9,195. Adjusted for 6% inflation, that corpus is worth about Rs 53,060 in today's money. The calculation assumes installments at the start of each month and a constant return, which real funds do not deliver.
+
+[FUND_COMPARISON] Q: Which is better: Mirae Asset Large Cap Fund - Direct Plan - Growth or DSP Large Cap Fund - Direct Plan - Growth?
+  REPLY: Here is a side-by-side view using the data as of 14-Mar-2025. Mirae Asset Large Cap Fund - Direct Plan - Growth shows NAV Rs 123.39, 1-year return 3.2%, 3-year return 10.7%, 5-year return 9.9%, 5-year return 9.9%, expense ratio 3-year return 9.9%. DSP Large Cap Fund - Direct Plan - Growth shows NAV Rs 486.89, 1-year return 0.2%, 3-year return 12.6%, 5-year return 10.9%, expense ratio 5.6%. DSP Large Cap Fund - Direct Plan - Growth has the lowest expense ratio at 0.2%, which matters because costs
+
+[PORTFOLIO_RECOMMENDATION] Q: I'm 24. I want to start a SIP of Rs 4,000 per month for 4 years. I am a conservative investor. Which funds should I choose?
+  REPLY: Happy to help, Sneha. Here is a conservative plan for Rs 4,000 a month over 4 years, using only the verified figures. You did not state your risk appetite, so the plan uses the conservative profile from your earlier details; tell me if that is wrong. Put Rs 2,000 (50%) in SBI SHORT TERM FUND - Direct Plan - Growth, with NAV Rs 36.43, 3-year return 7.6%, expense ratio 35%, 5-year return 6.5%, a Moderate riskometer. For Conservative Hybrid Fund, Rs 1,400 a month (35%) can go to SBI SHORT TERM FUND
+
+[PORTFOLIO_RECOMMENDATION] Q: Hi, I am Imran. Planning to put Rs 4,000 monthly for the next 2 years. Goal: my daughter's wedding. My risk appetite is conservative. How should I split this money?
+  REPLY: Thank you, Imran. For a conservative investor putting Rs 4,000 a month for 2 years, here is a plan based on the verified data. For Liquid Fund, Rs 2,400 a month (60%) can go to the schemes I described above, which are Short Duration Funds with a Moderate riskometer, or Flexi Cap Fund. For Short Duration Fund, Rs 2,400 a month (40%) can go to Bandhan Short Term Fund - Direct Plan - Growth, which shows 3-year return 7.0%, expense ratio 3-year return 6.3%, a Low riskometer. For Short Duration Fund,
+
+report: eval_v1.json

@@ -8,8 +8,8 @@ explains the highest-ranked result using only the supplied evidence.
 
 Usage:
     python inference/mutual_fund_advisor.py \
-        --checkpoint checkpoints/finetune_v2/best_model.pt \
-        --tokenizer tokenizer/tokenizer.model \
+        --checkpoint checkpoints/finetune_v5/best_model.pt \
+        --tokenizer tokenizer/tokenizer_v2.model \
         --model_config configs/model_config.yaml
 """
 
@@ -37,6 +37,7 @@ from psycopg2 import sql
 from psycopg2.extensions import connection
 
 from inference.database_schema import FUND_COLUMNS, USER_COLUMNS, FUNDS_TABLE, USERS_TABLE
+from inference.financial_calculator import calculate_sip
 from inference.generate import (
     GREETING_REPLY, generate_chat_reply, informational_reply, is_greeting, is_informational,
 )
@@ -699,7 +700,7 @@ def build_prompt(user_query: str, profile: UserProfile, ranked_funds: list[Fund]
     if profile.horizon_years and sip_amt:
         r = 0.12 / 12  # 12% annual equity rate, monthly
         n = profile.horizon_years * 12
-        fv = sip_amt * (((1 + r) ** n - 1) / r) * (1 + r)
+        fv = calculate_sip(sip_amt, profile.horizon_years, 12.0)["corpus"]
         invested = sip_amt * n
         sip_projection = (
             f"\n  SIP math: \u20b9{sip_amt:,}/month for {profile.horizon_years} years "
@@ -1043,7 +1044,7 @@ def build_verified_response(generated_text: str, matched_fund: Fund | None,
         import math as _math
         r = 0.12 / 12
         n = profile.horizon_years * 12
-        fv = sip_amt * (((1 + r) ** n - 1) / r) * (1 + r)
+        fv = calculate_sip(sip_amt, profile.horizon_years, 12.0)["corpus"]
         invested = sip_amt * n
         sip_proj_line = (
             f"  \u2022 SIP projection: \u20b9{sip_amt:,}/month \u00d7 {profile.horizon_years}yr "
@@ -1113,8 +1114,7 @@ def test_advisory_loop():
     cfg = ModelConfig(**{k: v for k, v in cfg_dict.items() if k in ModelConfig.__dataclass_fields__})
     model = MentraFiAI(cfg).to(device)
 
-    # Try to load v2, fall back to old
-    for ckpt_path in ["checkpoints/finetune_v2/best_model.pt", "checkpoints/finetune_old/best_model.pt"]:
+    for ckpt_path in ["checkpoints/finetune_v5/best_model.pt"]:
         if os.path.exists(ckpt_path):
             checkpoint = torch.load(ckpt_path, map_location=device, weights_only=False)
             model.load_state_dict(checkpoint["model_state_dict"])
@@ -1125,7 +1125,7 @@ def test_advisory_loop():
         print("✗ No checkpoint found")
         return
 
-    tokenizer = Tokenizer("tokenizer/tokenizer.model")
+    tokenizer = Tokenizer("tokenizer/tokenizer_v2.model")
     store = PostgresFundStore()
 
     while True:
@@ -1170,7 +1170,7 @@ def test_advisory_loop():
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--checkpoint", default="checkpoints/finetune_v2/best_model.pt")
+    parser.add_argument("--checkpoint", default="checkpoints/finetune_v5/best_model.pt")
     parser.add_argument("--tokenizer", default="tokenizer/tokenizer.model")
     parser.add_argument("--model_config", default="configs/model_config.yaml")
     parser.add_argument("--user_id", help="Application user ID used to load suitability fields")

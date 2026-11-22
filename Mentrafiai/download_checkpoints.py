@@ -1,6 +1,7 @@
 """
 MentraFiAI: Download Best Checkpoints
-Downloads the 3 networks directly into Mentrafiai/checkpoints/ from GitHub Releases or Hugging Face.
+Downloads the 3 networks directly into Mentrafiai/checkpoints/ from GitHub Releases (v2.0.0:
+Network 3 is the 120M llm120 model) or Hugging Face (legacy v1 files only).
 Zero external dependencies required (uses built-in Python urllib with Hugging Face fallback).
 """
 
@@ -16,17 +17,17 @@ if sys.platform == "win32":
 
 ROOT_DIR = Path(__file__).resolve().parent
 
-GITHUB_BASE_URL = "https://github.com/Jaykumar122/APP-Mentrafi2.0/releases/download/v1.0.0"
+GITHUB_BASE_URL = "https://github.com/Jaykumar122/APP-Mentrafi2.0/releases/download/v2.0.0"
 HF_REPO_ID = "singh0123/MentraFiAI-TriNetwork"
 
 ASSETS = [
     # (Remote file name in GitHub release, local target path, HF relative path)
     ("best_classifier.pt", "checkpoints/classifier/best_classifier.pt", "checkpoints/classifier/best_classifier.pt"),
     ("best_parser_net.pt", "checkpoints/query_parser/best_parser_net.pt", "checkpoints/query_parser/best_parser_net.pt"),
-    ("best_model.pt", "checkpoints/finetune_v5/best_model.pt", "checkpoints/finetune_v5/best_model.pt"),
+    # Network 3: 120M llm120 fine-tuned model (weights only, used by serve.py)
+    ("llm120_sft_best.pt", "checkpoints/llm120_sft/best.pt", "checkpoints/llm120_sft/best.pt"),
     ("tokenizer_v2.model", "tokenizer/tokenizer_v2.model", "tokenizer/tokenizer_v2.model"),
     ("tokenizer_v2.vocab", "tokenizer/tokenizer_v2.vocab", "tokenizer/tokenizer_v2.vocab"),
-    ("model_config.yaml", "configs/model_config.yaml", "configs/model_config.yaml"),
 ]
 
 def reporthook(block_num, block_size, total_size):

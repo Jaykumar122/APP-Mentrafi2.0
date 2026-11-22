@@ -73,14 +73,9 @@ def main():
     cfg = ModelConfig(**{k: v for k, v in cfg_dict.items() if k in ModelConfig.__dataclass_fields__})
     model = MentraFiAI(cfg).to(device)
 
-    # Load checkpoint - prefer the newest fine-tune available
+    # Load checkpoint (finetune_v5 is the only legacy 102M checkpoint kept)
     candidate_paths = [
-        "checkpoints/finetune_v6/best_model.pt",
         "checkpoints/finetune_v5/best_model.pt",
-        "checkpoints/finetune_v4/best_model.pt",
-        "checkpoints/finetune_v3/best_model.pt",
-        "checkpoints/finetune_v2/best_model.pt",
-        "checkpoints/pretrain_v2/best_model.pt",
     ]
     ckpt_path = None
     for candidate in candidate_paths:

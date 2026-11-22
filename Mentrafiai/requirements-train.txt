@@ -1,0 +1,8 @@
+# Reference versions tested locally with Python 3.12.10 on Windows.
+# Install a matching GPU/CUDA PyTorch wheel using https://pytorch.org/get-started/locally/
+# before this file. Linux/server compatibility must still be smoke-tested there.
+torch==2.11.0
+numpy==2.3.5
+sentencepiece==0.2.2
+PyYAML==6.0.2
+pytest==9.1.1

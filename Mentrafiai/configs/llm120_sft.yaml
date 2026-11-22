@@ -1,0 +1,49 @@
+# ORIGINAL llm120 SFT, one GPU (e.g. a single T4) or CPU.
+# For Kaggle GPU T4 x2 (DDP) use configs/kaggle_2xt4_sft.yaml via kaggle_train.py.
+# All paths resolve from cwd. Data must be produced by llm120.prepare --mode sft
+# with --context-length 1024 and the SAME tokenizer as the pretrain checkpoint.
+# Required: --init checkpoints/llm120_pretrain/best.pt, or --resume an SFT .pt.
+# --init loads weights only and resets optimizer/scaler/RNG/counters.
+# Dimensions and tokenizer identity must match the pretraining checkpoint.
+model:
+  vocab_size: 16000
+  context_length: 1024
+  num_layers: 16
+  d_model: 768
+  num_heads: 12
+  num_kv_heads: 4
+  d_ff: 2240
+  dropout: 0.0
+  rope_theta: 10000.0
+  norm_eps: 0.000001
+  init_std: 0.02
+  pad_token_id: 0
+  bos_token_id: 1
+  eos_token_id: 2
+  unk_token_id: 3
+  user_token_id: 4
+  assistant_token_id: 5
+training:
+  stage: sft
+  data_dir: data/llm120_sft
+  tokenizer: tokenizer/tokenizer_v2.model
+  output_dir: checkpoints/llm120_sft
+  # Assistant-only targets; actual supervised tokens/update vary by content.
+  # Educational curriculum + 2,400 grounded Network 3 examples (2,416 train /
+  # 288 val). 32 examples/update * 230 updates ~= 3 passes, with replacement.
+  # Monitor validation and a separate human-reviewed behavioral evaluation.
+  batch_size: 4
+  gradient_accumulation_steps: 8
+  max_steps: 230
+  warmup_steps: 20
+  learning_rate: 0.00005
+  min_lr: 0.000005
+  weight_decay: 0.1
+  grad_clip: 1.0
+  precision: auto
+  gradient_checkpointing: true
+  eval_interval: 20
+  eval_batches: 72  # 72 x 4 = 288 = the full validation set
+  save_interval: 20
+  seed: 42
+  max_overflow_retries: 8

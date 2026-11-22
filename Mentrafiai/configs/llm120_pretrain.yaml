@@ -1,0 +1,54 @@
+# ORIGINAL llm120 pretraining, one GPU (e.g. a single T4) or CPU.
+# For Kaggle GPU T4 x2 (DDP) use configs/kaggle_2xt4_pretrain.yaml via kaggle_train.py.
+# All paths resolve from the process working directory, not this file.
+# Prepare and hash-verify data with python -m llm120.prepare first.
+# This is a training plan, not a claim of quality, speed, or fitting a GPU.
+# Use python -m llm120.benchmark to measure a synthetic workload locally.
+# For a CPU smoke test, reduce the nested model dimensions and training sizes;
+# alternatively omit model below and pass a model-only --model-config YAML.
+model:
+  vocab_size: 16000
+  context_length: 1024
+  num_layers: 16
+  d_model: 768
+  num_heads: 12
+  num_kv_heads: 4
+  d_ff: 2240
+  dropout: 0.0
+  rope_theta: 10000.0
+  norm_eps: 0.000001
+  init_std: 0.02
+  pad_token_id: 0
+  bos_token_id: 1
+  eos_token_id: 2
+  unk_token_id: 3
+  user_token_id: 4
+  assistant_token_id: 5
+training:
+  stage: pretrain
+  data_dir: data/llm120_pretrain
+  tokenizer: tokenizer/tokenizer_v2.model
+  output_dir: checkpoints/llm120_pretrain
+  # 2 * 32 * 1024 = 65,536 supervised tokens per successful update.
+  batch_size: 2
+  gradient_accumulation_steps: 32
+  # About 1.178B train tokens, including repeated finance documents; about
+  # 0.90B tokens are unique. 18,000 updates sample about 1.18B target tokens.
+  # Sampling is WITH REPLACEMENT: this is an expected exposure budget, not
+  # a complete pass or a hard per-document repetition cap. One dataset-length
+  # of random draws visits only about 63% of windows on average.
+  max_steps: 18000
+  warmup_steps: 500
+  learning_rate: 0.0003
+  min_lr: 0.00003
+  weight_decay: 0.1
+  grad_clip: 1.0
+  # auto = CUDA FP16 AMP + GradScaler (including T4), CPU FP32.
+  # bf16 is opt-in and rejected unless the CUDA device supports it.
+  precision: auto
+  gradient_checkpointing: true
+  eval_interval: 250
+  eval_batches: 20
+  save_interval: 250
+  seed: 42
+  max_overflow_retries: 8

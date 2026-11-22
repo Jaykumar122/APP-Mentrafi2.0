@@ -1,0 +1,31 @@
+◇ injected env (4) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
+◇ injected env (0) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+✅ PostgreSQL connected
+AMFI feed: 14,481 schemes with official categories.
+37,917 funds (14,320 matched to AMFI); 34,880 labels change.
+   19593  Equity/Diversified -> Debt/Fixed Maturity / Interval
+    1373  Debt/Debt Fund -> Debt/Debt
+    1170  Equity/Diversified -> Equity/Sectoral / Thematic
+     968  Equity/Diversified -> Equity/Index Fund
+     828  Debt/Debt Fund -> Debt/Liquid
+     579  Equity/Diversified -> Debt/Debt
+     546  Equity/Diversified -> Debt/Short Duration
+     541  Hybrid/Balanced -> Debt/Fixed Maturity / Interval
+     449  Hybrid/Balanced -> Hybrid/Hybrid
+     436  Debt/Debt Fund -> Debt/Ultra Short Duration
+     390  Equity/Diversified -> Hybrid/Arbitrage
+     384  Equity/Diversified -> Equity/ETF
+     375  Equity/Diversified -> Debt/Overnight
+     369  Debt/Debt Fund -> Debt/Gilt
+     311  Debt/Debt Fund -> Debt/Corporate Bond
+     268  Equity/Diversified -> Equity/International
+     261  Equity/Diversified -> Debt/Money Market
+     259  Equity/Diversified -> Debt/Ultra Short Duration
+     259  Debt/Debt Fund -> Debt/Dynamic Bond
+     257  Debt/Debt Fund -> Debt/Short Duration
+     235  Equity/Diversified -> Hybrid/Multi Asset Allocation
+     233  Equity/Diversified -> Debt/Credit Risk
+     229  Equity/Diversified -> Hybrid/Equity Savings
+     228  Hybrid/Balanced -> Hybrid/Aggressive Hybrid
+     228  Debt/Debt Fund -> Debt/Index Fund
+Updated 34,880 funds. Original labels are in funds_category_backup.
