@@ -143,7 +143,7 @@ MentraFi operates as an integrated four-tier pipeline where user intent is conve
     <td align="center" width="33.3%">
       <img src="docs/screenshots/08_sip_calculator.png" width="100%" alt="SIP & Wealth Calculator" /><br />
       <b>SIP & Wealth Calculator</b><br />
-      <sub>Ordinary Annuity, Step-Up & Inflation Math</sub>
+      <sub>SIP, Step-Up, Lump Sum & Goal planning with growth chart</sub>
     </td>
     <td align="center" width="33.3%">
       <img src="docs/screenshots/11_explore_funds.png" width="100%" alt="Explore Mutual Funds" /><br />
